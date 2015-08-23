@@ -3,7 +3,7 @@ import org.scalatest.Matchers
 
 import Utils.java2js
 
-class ClassSpec extends FlatSpec with Matchers {
+class MethodSpec extends FlatSpec with Matchers {
 
   import Utils._
   
@@ -11,13 +11,17 @@ class ClassSpec extends FlatSpec with Matchers {
     val java =
 """
     class Test {
+      void add() {
+      }
     }
 
 """
     
     val expected =
 """
-    class Test {}
+    class Test {
+      add() {}
+    }
 
 """
 

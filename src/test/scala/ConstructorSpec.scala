@@ -47,6 +47,29 @@ class ConstructorSpec extends FlatSpec with Matchers {
     java2js(java) should equal (expected)
   }
   
+  "Constructor member access" should "translate into member access" in {
+    val java =
+"""
+    class Test {
+      Test(int x) {
+        this.x = x;
+      }
+    }
+"""
+    
+    val expected =
+"""
+    class Test {
+      constructor(x) {
+        this.x = x;
+      }
+    }
+
+"""
+
+    java2js(java) should equal (expected)
+  }
+  
   /*
   "Constructor overloading " should "translate into ..." in {
     val java =

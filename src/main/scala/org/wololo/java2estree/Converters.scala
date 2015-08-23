@@ -32,7 +32,7 @@ object Converters {
   implicit def expression: PartialFunction[jp.expr.Expression, Expression] = {
     case nl: jp.expr.NullLiteralExpr => new Literal("null", "null");
     case n: jp.expr.NameExpr => new Identifier(n.getName)
-    case x: jp.expr.AssignExpr => new AssignmentExpression(assignmentOperator(x.getOperator), x.getValue, x.getTarget)
+    case x: jp.expr.AssignExpr => new AssignmentExpression(assignmentOperator(x.getOperator), x.getTarget, x.getValue)
     case ee: jp.expr.EnclosedExpr => ee.getInner
     case il: jp.expr.IntegerLiteralExpr => new Literal(il.getValue, il.getValue)
     case il: jp.expr.LongLiteralExpr => new Literal(il.getValue, il.getValue)
@@ -42,6 +42,8 @@ object Converters {
     case be: jp.expr.BinaryExpr => new BinaryExpression(binaryOperator(be.getOperator), be.getLeft, be.getRight)
     case oc: jp.expr.ObjectCreationExpr =>
       new NewExpression(new Identifier(oc.getType.getName), if (oc.getArgs == null) List() else expressions(oc.getArgs))
+    case x: jp.expr.FieldAccessExpr => new MemberExpression(new ThisExpression(), new Identifier(x.getField), false)
+      
   }
   def statement: PartialFunction[jp.stmt.Statement, Statement] = {
     case x: jp.stmt.ReturnStmt => new ReturnStatement(x.getExpr)
@@ -56,13 +58,15 @@ object Converters {
   }
   def methodDefinitions: PartialFunction[jp.body.BodyDeclaration, List[MethodDefinition]] = { 
     // TODO: consider overloads
-    /*case x: jp.body.FieldDeclaration => new MethodDefinition(
-      new Identifier(x.get),
-      new FunctionExpression(parameters(md.getParameters), md.getBlock),
-      "get",
-      false,
-      false
-    )*/
+    case x: jp.body.FieldDeclaration => x.getVariables.toList map {
+      x => new MethodDefinition(
+        new Identifier(x.getId.getName),
+        new FunctionExpression(List(), new BlockStatement(if (x.getInit == null) List() else List(new ReturnStatement(x.getInit)))),
+        "get",
+        false,
+        false
+      )      
+    }
     case md: jp.body.ConstructorDeclaration => List(new MethodDefinition(
       new Identifier("constructor"),
       new FunctionExpression(parameters(md.getParameters), blockStatement(md.getBlock)),

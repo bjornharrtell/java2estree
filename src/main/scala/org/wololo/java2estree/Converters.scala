@@ -13,7 +13,7 @@ object Converters {
   )
   implicit def p2i(p : jp.body.Parameter) = new Identifier(p.getId.getName)
   implicit def vd2vd(vd: jp.body.VariableDeclarator) = new VariableDeclarator(new Identifier(vd.getId.getName), vd.getInit)
-  implicit def bs2bs(bs: jp.stmt.BlockStmt) = new BlockStatement(maps(bs.getStmts.toList))
+  implicit def bs2bs(bs: jp.stmt.BlockStmt) = new BlockStatement(if (bs.getStmts == null) List() else maps(bs.getStmts.toList))
   implicit def o2o: PartialFunction[jp.expr.BinaryExpr.Operator, String] = {
     case jp.expr.BinaryExpr.Operator.plus => "+"
     case jp.expr.BinaryExpr.Operator.minus => "-"
@@ -43,13 +43,16 @@ object Converters {
     }
   }
   implicit def bd2md: PartialFunction[jp.body.BodyDeclaration, MethodDefinition] = { 
+    // TODO: check Modifiers, create different types based on that
+    
     case md: jp.body.MethodDeclaration => new MethodDefinition(
-    new Identifier(md.getName),
-    new FunctionExpression(mapp(md.getParameters.toList), md.getBody),
-    "method",
-    false,
-    false
-  )}
+      new Identifier(md.getName),
+      new FunctionExpression(mapp(md.getParameters.toList), md.getBody),
+      "method",
+      false,
+      false
+    )
+  }
   
   def asProgram(cu : jp.CompilationUnit) = new Program(maptd(cu.getTypes.toList))
   

@@ -1,0 +1,13 @@
+{
+  "name": "java2js",
+  "version": "0.1.0",
+  "description": "Java to JavaScript",
+  "engines": {
+    "node": ">= 0.10.0"
+  },
+  "author": "Björn Harrtell",
+  "license": "MIT",
+  "dependencies": {
+    "astring": "0.3.4"
+  }
+}

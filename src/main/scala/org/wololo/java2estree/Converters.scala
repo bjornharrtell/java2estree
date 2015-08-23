@@ -44,6 +44,8 @@ object Converters {
       new Literal(il.getValue, "\"" + il.getValue + "\"")
     case be: jp.expr.BinaryExpr =>
       new BinaryExpression(be.getOperator, be.getLeft, be.getRight)
+    case oc: jp.expr.ObjectCreationExpr =>
+      new NewExpression(new Identifier(oc.getType.getName), if (oc.getArgs == null) List() else mape(oc.getArgs.toList))
   }
   implicit def s2s: PartialFunction[jp.stmt.Statement, Statement] = {
     case r: jp.stmt.ReturnStmt => new ReturnStatement(r.getExpr)
@@ -77,6 +79,7 @@ object Converters {
   
   def mapp(l: List[jp.body.Parameter]): List[Identifier] = l map { a => a: Identifier }
   def maps(l: List[jp.stmt.Statement]): List[Statement] = l map { a => a: Statement }
+  def mape(l: List[jp.expr.Expression]): List[Expression] = l map { a => a: Expression }
   def maptd(l: List[jp.body.TypeDeclaration]): List[ClassDeclaration] = l map { a => a: ClassDeclaration }
   def mapbd(l: List[jp.body.BodyDeclaration]): List[MethodDefinition] = l map { a => a: MethodDefinition }
   def mapvd(l: List[jp.body.VariableDeclarator]): List[VariableDeclarator] = l map { a => a: VariableDeclarator }

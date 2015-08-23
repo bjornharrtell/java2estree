@@ -27,4 +27,25 @@ class MethodSpec extends FlatSpec with Matchers {
 
     java2js(java) should equal (expected)
   }
+  
+  "Method parameters" should "translate into a method parameters" in {
+    val java =
+"""
+    class Test {
+      void add(int x, int y) {
+      }
+    }
+
+"""
+    
+    val expected =
+"""
+    class Test {
+      add(x, y) {}
+    }
+
+"""
+
+    java2js(java) should equal (expected)
+  }
 }

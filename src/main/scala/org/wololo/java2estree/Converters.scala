@@ -26,10 +26,22 @@ object Converters {
     case jp.expr.BinaryExpr.Operator.greaterEquals => ">="
   }
   implicit def e2e: PartialFunction[jp.expr.Expression, Expression] = {
+    case nl: jp.expr.NullLiteralExpr =>
+      new Literal("null", "null");
     case n: jp.expr.NameExpr =>
       new Identifier(n.getName)
+    case ee: jp.expr.EnclosedExpr =>
+      ee.getInner
     case il: jp.expr.IntegerLiteralExpr =>
       new Literal(il.getValue, il.getValue)
+    case il: jp.expr.LongLiteralExpr =>
+      new Literal(il.getValue, il.getValue)
+    case il: jp.expr.DoubleLiteralExpr =>
+      new Literal(il.getValue, il.getValue)
+    case il: jp.expr.CharLiteralExpr =>
+      new Literal(il.getValue, "\"" + il.getValue + "\"")
+    case il: jp.expr.StringLiteralExpr =>
+      new Literal(il.getValue, "\"" + il.getValue + "\"")
     case be: jp.expr.BinaryExpr =>
       new BinaryExpression(be.getOperator, be.getLeft, be.getRight)
   }

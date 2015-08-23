@@ -26,4 +26,52 @@ class ConstructorSpec extends FlatSpec with Matchers {
 
     java2js(java) should equal (expected)
   }
+  
+  "Constructor parameters" should "translate into a constructor parameters" in {
+    val java =
+"""
+    class Test {
+      Test(int x, int y) {
+      }
+    }
+"""
+    
+    val expected =
+"""
+    class Test {
+      constructor(x, y) {}
+    }
+
+"""
+
+    java2js(java) should equal (expected)
+  }
+  
+  /*
+  "Constructor overloading " should "translate into ..." in {
+    val java =
+"""
+    class Test {
+      Test() {
+      }
+      
+      Test(int x) {
+      }
+      
+      Test(int x, int y) {
+      }
+    }
+"""
+    
+    val expected =
+"""
+    class Test {
+      constructor(x, y) {}
+    }
+
+"""
+
+    java2js(java) should equal (expected)
+  }
+  */
 }

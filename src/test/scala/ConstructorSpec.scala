@@ -7,7 +7,7 @@ class ConstructorSpec extends FlatSpec with Matchers {
 
   import Utils._
   
-  "A Class constructor " should "translate into a Class constructor" in {
+  "A Class constructor" should "translate into a Class constructor" in {
     val java =
 """
     class Test {

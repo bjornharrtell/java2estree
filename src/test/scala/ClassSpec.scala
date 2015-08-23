@@ -7,7 +7,7 @@ class ClassSpec extends FlatSpec with Matchers {
 
   import Utils._
   
-  "A Class " should "translate into a Class" in {
+  "A Class" should "translate into a Class" in {
     val java =
 """
     class Test {

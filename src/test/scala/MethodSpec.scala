@@ -7,7 +7,7 @@ class MethodSpec extends FlatSpec with Matchers {
 
   import Utils._
   
-  "A Class " should "translate into a Class" in {
+  "A Class with a method" should "translate into a Class with a method" in {
     val java =
 """
     class Test {

@@ -1,1 +1,9 @@
 language: java
+sudo: false
+cache:
+  directories:
+  - node_modules
+  - $HOME/.m2
+before_install:
+  - npm install
+

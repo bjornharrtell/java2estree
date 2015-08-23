@@ -1,3 +1,3 @@
 # java2estree
 
-java2estree
+Java to JavaScript via ESTree

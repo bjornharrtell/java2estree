@@ -42,12 +42,15 @@ object Converters {
     case be: jp.expr.BinaryExpr => new BinaryExpression(binaryOperator(be.getOperator), be.getLeft, be.getRight)
     case oc: jp.expr.ObjectCreationExpr =>
       new NewExpression(new Identifier(oc.getType.getName), if (oc.getArgs == null) List() else expressions(oc.getArgs))
-    case x: jp.expr.FieldAccessExpr => new MemberExpression(new ThisExpression(), new Identifier(x.getField), false)
-      
+    case x: jp.expr.FieldAccessExpr =>
+      new MemberExpression(new ThisExpression(), new Identifier(x.getField), false)
+    case x: jp.expr.MethodCallExpr => 
+      new CallExpression(new MemberExpression(new ThisExpression(), new Identifier(x.getName), false), expressions(x.getArgs))
   }
   def statement: PartialFunction[jp.stmt.Statement, Statement] = {
     case x: jp.stmt.ReturnStmt => new ReturnStatement(x.getExpr)
     case x: jp.stmt.IfStmt => new IfStatement(x.getCondition, statement(x.getThenStmt) , statement(x.getElseStmt))
+    //case x: jp.stmt.ExplicitConstructorInvocationStmt =>  
     case x: jp.stmt.BlockStmt => blockStatement(x) //{println(x.toString); new BlockStatement(List())}
     case x: jp.stmt.ExpressionStmt => statement(x)
   }

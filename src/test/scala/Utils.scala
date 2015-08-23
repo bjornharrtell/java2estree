@@ -15,7 +15,7 @@ object Utils {
   
   def java2js(java: String) : String = {
     val cu = JavaParser.parse(new StringReader(java), true)
-    val program = Converters.asProgram(cu)
+    val program = Converters.program(cu)
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     val pb = new ProcessBuilder(List("./node_modules/astring/bin/astring", "--indent", "  ", "--startingIndentLevel", "2").asJava)

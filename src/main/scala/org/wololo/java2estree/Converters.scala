@@ -35,16 +35,23 @@ object Converters {
   }
   implicit def s2s: PartialFunction[jp.stmt.Statement, Statement] = {
     case r: jp.stmt.ReturnStmt => new ReturnStatement(r.getExpr)
-    case e: jp.stmt.ExpressionStmt => {
-      if (e.getExpression.isInstanceOf[jp.expr.VariableDeclarationExpr]) {
-        new VariableDeclaration(mapvd(e.getExpression.asInstanceOf[jp.expr.VariableDeclarationExpr].getVars.toList))
-      }
-      else new ExpressionStatement(e.getExpression)
-    }
+    case e: jp.stmt.ExpressionStmt => e2es(e)
+  }
+  def e2es(es: jp.stmt.ExpressionStmt) : Statement = es.getExpression match {
+    case vd: jp.expr.VariableDeclarationExpr =>
+      new VariableDeclaration(mapvd(vd.getVars.toList))
+    case e: jp.expr.Expression => new ExpressionStatement(e)
   }
   implicit def bd2md: PartialFunction[jp.body.BodyDeclaration, MethodDefinition] = { 
-    // TODO: check Modifiers, create different types based on that
-    
+    // TODO: consider Modifiers
+    // TODO: consider overloads
+    case md: jp.body.ConstructorDeclaration => new MethodDefinition(
+      new Identifier("constructor"),
+      new FunctionExpression(mapp(md.getParameters.toList), md.getBlock),
+      "constructor",
+      false,
+      false
+    )
     case md: jp.body.MethodDeclaration => new MethodDefinition(
       new Identifier(md.getName),
       new FunctionExpression(mapp(md.getParameters.toList), md.getBody),

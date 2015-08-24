@@ -24,6 +24,8 @@ object Cli extends App {
   mapper.registerModule(DefaultScalaModule)
   mapper.enable(SerializationFeature.INDENT_OUTPUT)
 
+  //println(mapper.writeValueAsString(program))
+  
   val pb = new ProcessBuilder(List("./node_modules/astring/bin/astring", "--indent", "  ").asJava)
   val p = pb.start()
 

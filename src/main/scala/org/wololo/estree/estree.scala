@@ -5,7 +5,7 @@ trait Node {
 }
 
 class Program (
-  sourceType: String,
+  val sourceType: String,
   val body: List[Statement]
 ) extends Node
 
@@ -17,6 +17,8 @@ class Function (
 // Statements
 
 trait Statement extends Node
+
+class EmptyStatement extends Statement
 
 class BlockStatement(val body: List[Statement]) extends Statement
 
@@ -30,6 +32,16 @@ class IfStatement (
 
 class ReturnStatement (
   val argument: Expression
+) extends Statement
+
+class ThrowStatement (
+  val argument: Expression
+) extends Statement
+
+class TryStatement (
+  val block: BlockStatement,
+  val handler: CatchClause = null,
+  val finalizer: BlockStatement = null
 ) extends Statement
 
 // Declarations
@@ -64,6 +76,12 @@ class FunctionExpression (
   body: BlockStatement
 ) extends Function(params, body) with Expression
 
+class UnaryExpression (
+  val operator: String,
+  val prefix: Boolean,
+  val argument: Expression
+) extends Expression
+
 class BinaryExpression (
   val operator: String,
   val left: Expression,
@@ -77,7 +95,7 @@ class AssignmentExpression (
 ) extends Expression
 
 class CallExpression (
-  val callee: Expression,
+  val callee: Node, // Expression or Super
   val arguments: List[Expression]
 ) extends Expression
 
@@ -87,10 +105,16 @@ class NewExpression (
 )  extends CallExpression(callee, arguments)
 
 class MemberExpression (
-  val `object`: Expression,
+  val `object`: Node, // Expression or Super
   val property: Expression,
   val computed: Boolean
 ) extends Expression with Pattern
+
+class Super extends Node
+
+class ClassExpression(
+  body: ClassBody
+) extends Class(body) with Expression
 
 // Patterns
 
@@ -99,7 +123,7 @@ trait Pattern extends Node
 // Classes
 
 class Class (
-  val body: List[ClassBody]
+  val body: ClassBody
 ) extends Node
 
 class ClassBody(
@@ -118,6 +142,13 @@ class ClassDeclaration (
   val id: Identifier,
   val body: ClassBody
 ) extends Statement
+
+// Clauses
+
+class CatchClause (
+  val param: Pattern,
+  val body: BlockStatement
+) extends Node
 
 // Miscellaneous
 

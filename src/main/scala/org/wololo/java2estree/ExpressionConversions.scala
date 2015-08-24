@@ -33,21 +33,24 @@ object ExpressionConversions extends LazyLogging {
     case be: jp.expr.BinaryExpr =>
       new BinaryExpression(be.getOperator, be.getLeft, be.getRight)
     case x: jp.expr.InstanceOfExpr =>
-      new BinaryExpression("instanceof", x.getExpr, new Literal(x.getType.toString(), x.getType.toString()))
+      new BinaryExpression("instanceof", x.getExpr, 
+          new Literal(x.getType.toString(), x.getType.toString()))
     case x: jp.expr.CastExpr => x.getExpr
     case oc: jp.expr.ObjectCreationExpr =>
       new NewExpression(
           new Identifier(oc.getType.getName), expressions(oc.getArgs))
     case x: jp.expr.FieldAccessExpr =>
       new MemberExpression(
-          x.getScope, new Identifier(x.getField), false)
+          if (x.getScope == null) new ThisExpression else x.getScope,
+          new Identifier(x.getField), false)
     case x: jp.expr.MethodCallExpr =>
-      new CallExpression(new MemberExpression(if (x.getScope == null) new ThisExpression else x.getScope,
+      new CallExpression(new MemberExpression(
+          if (x.getScope == null) new ThisExpression else x.getScope,
           new Identifier(x.getName), false), expressions(x.getArgs))
     case x: jp.expr.SuperExpr =>
       new Literal("super", "super")
     case x => {
-      logger.debug(s"Unexpected expression (${if (x==null) x else x.toString()})")
+      logger.debug(s"Unexpected expression ($x})")
       new Literal("null", "null")
     }
   }

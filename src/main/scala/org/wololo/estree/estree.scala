@@ -6,11 +6,11 @@ trait Node {
 
 class Program (
   val sourceType: String,
-  val body: List[Statement]
+  val body: Iterable[Statement]
 ) extends Node
 
 class Function (
-  val params: List[Pattern],
+  val params: Iterable[Pattern],
   val body: BlockStatement
 ) extends Node
 
@@ -20,7 +20,7 @@ trait Statement extends Node
 
 class EmptyStatement extends Statement
 
-class BlockStatement(val body: List[Statement]) extends Statement
+class BlockStatement(val body: Iterable[Statement]) extends Statement
 
 class ExpressionStatement(val expression: Expression) extends Statement
 
@@ -50,12 +50,12 @@ trait Declaration extends Statement
 
 class FunctionDeclaration (
   val id: Identifier,
-  params: List[Pattern],
+  params: Iterable[Pattern],
   body: BlockStatement
 ) extends Function(params, body) with Declaration
 
 class VariableDeclaration (
-  val declarations: List[VariableDeclarator]
+  val declarations: Iterable[VariableDeclarator]
 ) extends Declaration {
   val kind: String = "var"
 }
@@ -72,7 +72,7 @@ trait Expression extends Node
 class ThisExpression extends Expression
 
 class FunctionExpression (
-  params: List[Pattern],
+  params: Iterable[Pattern],
   body: BlockStatement
 ) extends Function(params, body) with Expression
 
@@ -96,12 +96,12 @@ class AssignmentExpression (
 
 class CallExpression (
   val callee: Node, // Expression or Super
-  val arguments: List[Expression]
+  val arguments: Iterable[Expression]
 ) extends Expression
 
 class NewExpression (
   callee: Expression,
-  arguments: List[Expression]
+  arguments: Iterable[Expression]
 )  extends CallExpression(callee, arguments)
 
 class MemberExpression (
@@ -127,7 +127,7 @@ class Class (
 ) extends Node
 
 class ClassBody(
-  val body: List[MethodDefinition]
+  val body: Iterable[MethodDefinition]
 ) extends Node
 
 class MethodDefinition (

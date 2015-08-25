@@ -1,7 +1,8 @@
 package org.wololo.java2estree
 
+import scala.collection.JavaConversions._
+
 import org.wololo.estree._
-import CollectionConverters._
 import OperatorConversions._
 
 import com.github.javaparser.{ ast => jp }
@@ -36,9 +37,9 @@ object ExpressionConversions extends LazyLogging {
       new BinaryExpression("instanceof", x.getExpr, 
           new Literal(x.getType.toString(), x.getType.toString()))
     case x: jp.expr.CastExpr => x.getExpr
-    case oc: jp.expr.ObjectCreationExpr =>
+    case x: jp.expr.ObjectCreationExpr =>
       new NewExpression(
-          new Identifier(oc.getType.getName), expressions(oc.getArgs))
+          new Identifier(x.getType.getName), if (x.getArgs == null) List() else x.getArgs map expression)
     case x: jp.expr.FieldAccessExpr =>
       new MemberExpression(
           if (x.getScope == null) new ThisExpression else x.getScope,
@@ -46,7 +47,8 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.expr.MethodCallExpr =>
       new CallExpression(new MemberExpression(
           if (x.getScope == null) new ThisExpression else x.getScope,
-          new Identifier(x.getName), false), expressions(x.getArgs))
+          new Identifier(x.getName), false), 
+          if (x.getArgs == null) List() else x.getArgs map expression)
     case x: jp.expr.SuperExpr =>
       new Literal("super", "super")
     case x => {

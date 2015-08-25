@@ -1,10 +1,10 @@
 package org.wololo.java2estree
 
+import scala.collection.JavaConversions._
 import org.wololo.estree._
 import Converters._
 import ExpressionConversions._
 import OperatorConversions._
-import CollectionConverters._
 
 import com.github.javaparser.{ ast => jp }
 
@@ -18,7 +18,8 @@ object StatementConverters {
     case x: jp.stmt.ExplicitConstructorInvocationStmt =>
       new ExpressionStatement(new CallExpression(
           new MemberExpression(new ThisExpression(),
-              new Identifier("constructor"), false), expressions(x.getArgs)))
+              new Identifier("constructor"), false),
+              if (x.getArgs == null) List() else x.getArgs map expression))
     case x: jp.stmt.BlockStmt => blockStatement(x)
     case x: jp.stmt.ExpressionStmt => statement(x)
     // TODO: new TryStatement(blockStatement(x.getTryBlock)) and call catches
@@ -34,7 +35,7 @@ object StatementConverters {
   def statement(es: jp.stmt.ExpressionStmt): Statement =
     es.getExpression match {
     case x: jp.expr.VariableDeclarationExpr =>
-      new VariableDeclaration(variableDeclarators(x.getVars))
+      new VariableDeclaration(x.getVars map variableDeclarator)
     case x: jp.expr.Expression => new ExpressionStatement(x)
   }
 }

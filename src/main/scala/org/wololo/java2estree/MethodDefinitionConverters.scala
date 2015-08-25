@@ -7,22 +7,21 @@ import java.lang.reflect.Modifier
 import Converters._
 import OperatorConversions._
 import ExpressionConversions._
-import CollectionConverters._
 import StatementConverters._
 
 object MethodDefinitionConverters {
   def fromMethodDeclaration(x: jp.body.MethodDeclaration) = new MethodDefinition(
     new Identifier(x.getName),
-    new FunctionExpression(parameters(x.getParameters),
+    new FunctionExpression(x.getParameters map identifier,
         blockStatement(x.getBody)),
     "method",
     false,
     Modifier.isStatic(x.getModifiers)
   )
  
-  def fromMethodDeclarationOverloads(x: List[jp.body.MethodDeclaration]) = x map { x => new MethodDefinition(
+  def fromMethodDeclarationOverloads(x: Iterable[jp.body.MethodDeclaration]) = x map { x => new MethodDefinition(
     new Identifier(x.getName),
-      new FunctionExpression(parameters(x.getParameters),
+      new FunctionExpression(x.getParameters map identifier,
           blockStatement(x.getBody)),
       "method",
       false,
@@ -45,16 +44,16 @@ object MethodDefinitionConverters {
   
   def fromConstructorDeclaration(x: jp.body.ConstructorDeclaration) = new MethodDefinition(
     new Identifier("constructor"),
-    new FunctionExpression(parameters(x.getParameters),
+    new FunctionExpression(x.getParameters map identifier,
         blockStatement(x.getBlock)),
     "constructor",
     false,
     Modifier.isStatic(x.getModifiers)
   )
   
-  def fromConstructorDeclarationOverloads(x: List[jp.body.ConstructorDeclaration]) = x map { x => new MethodDefinition(
+  def fromConstructorDeclarationOverloads(x: Iterable[jp.body.ConstructorDeclaration]) = x map { x => new MethodDefinition(
     new Identifier("constructor"),
-      new FunctionExpression(parameters(x.getParameters),
+      new FunctionExpression(x.getParameters map identifier,
           blockStatement(x.getBlock)),
       "constructor",
       false,
@@ -64,7 +63,7 @@ object MethodDefinitionConverters {
   
   def fromClassOrInterfaceDeclaration(x: jp.body.ClassOrInterfaceDeclaration) = new MethodDefinition(
     new Identifier(x.getName),
-    new FunctionExpression(parameters(List()),
+    new FunctionExpression(List(),
         new BlockStatement(List(new ReturnStatement(classExpression(x))))),
         //blockStatement(classDeclaration(x))),
     "get",

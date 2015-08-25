@@ -15,6 +15,12 @@ object StatementConverters {
     case x: jp.stmt.IfStmt =>
       new IfStatement(x.getCondition, statement(x.getThenStmt),
           statement(x.getElseStmt))
+    case x: jp.stmt.ForStmt =>
+      // TODO: implement
+      new BlockStatement(List())
+    case x: jp.stmt.WhileStmt =>
+      // TODO: implement
+      new BlockStatement(List())
     case x: jp.stmt.ExplicitConstructorInvocationStmt =>
       new ExpressionStatement(new CallExpression(
           new MemberExpression(new ThisExpression(),
@@ -27,10 +33,10 @@ object StatementConverters {
     case x: jp.stmt.TryStmt => blockStatement(x.getTryBlock)
     case x: jp.stmt.ThrowStmt => new ThrowStatement(x.getExpr)
     case null => null
-    /*case x => {
-      logger.debug(s"Unexpected statement (${if (x==null) x else x.toString()})")
-      new BlockStatement(List())
-    }*/
+    //case x => {
+      //logger.debug(s"Unexpected statement (${if (x==null) x else x.toString()})")
+      //new BlockStatement(List())
+    //}
   }
   def statement(es: jp.stmt.ExpressionStmt): Statement =
     es.getExpression match {

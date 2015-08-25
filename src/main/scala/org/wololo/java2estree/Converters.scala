@@ -35,7 +35,7 @@ object Converters extends LazyLogging {
   
   def blockStatement(bs: jp.stmt.BlockStmt) =
     new BlockStatement(
-        if (bs.getStmts == null) List() else bs.getStmts map statement)  
+        if (bs == null || bs.getStmts == null) List() else bs.getStmts map statement)  
   
   /**
    * @return A tuple with a ClassBody and any static statements that found in the BodyDeclaration
@@ -55,7 +55,7 @@ object Converters extends LazyLogging {
     
     val constructor = types.collect {
       case (g, l) if g == classOf[jp.body.ConstructorDeclaration] && l.length == 1 => 
-        l.map { x => fromConstructorDeclaration(x.asInstanceOf[jp.body.ConstructorDeclaration], memberFields) }
+        List(fromConstructorDeclaration(l(0).asInstanceOf[jp.body.ConstructorDeclaration], memberFields))
       case (g, l) if g == classOf[jp.body.ConstructorDeclaration] && l.length > 1 => 
         fromConstructorDeclarationOverloads(l.map { _.asInstanceOf[jp.body.ConstructorDeclaration] }, memberFields)
     } flatten

@@ -29,6 +29,9 @@ object ExpressionConversions extends LazyLogging {
       new Literal(il.getValue, "\"" + il.getValue + "\"")
     case il: jp.expr.StringLiteralExpr =>
       new Literal(il.getValue, "\"" + il.getValue + "\"")
+    case x: jp.expr.ArrayCreationExpr =>
+      // TODO: implement
+      new Literal("null", "null")
     case x: jp.expr.UnaryExpr =>
       new UnaryExpression(x.getOperator, true, x.getExpr)
     case be: jp.expr.BinaryExpr =>

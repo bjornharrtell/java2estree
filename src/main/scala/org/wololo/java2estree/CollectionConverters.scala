@@ -40,15 +40,20 @@ object CollectionConverters {
       value.map { x => fromFieldDeclaration(x.asInstanceOf[jp.body.FieldDeclaration]) } flatten
     
     // method declarations
-    case (key, value) if key == classOf[jp.body.MethodDeclaration] && value.length == 1 => 
-      List(fromMethodDeclaration(value(0).asInstanceOf[jp.body.MethodDeclaration]))
-    
-    // TODO: wrong.. need to move into above and group by name
-    case (key, value) if key == classOf[jp.body.MethodDeclaration] && value.length > 1 => 
-      fromMethodDeclarationOverloads(value.map { _.asInstanceOf[jp.body.MethodDeclaration] })
-    
+    case (key, value) if key == classOf[jp.body.MethodDeclaration] => 
+      value.groupBy(x => x.asInstanceOf[jp.body.MethodDeclaration].getName).map {
+      
+      // single method declaration
+      case (key, value) if value.length == 1 =>
+        List(fromMethodDeclaration(value(0).asInstanceOf[jp.body.MethodDeclaration]))
+      
+      // overloaded method declarations
+      case (key, value) if value.length > 1 =>
+        fromMethodDeclarationOverloads(value.map { _.asInstanceOf[jp.body.MethodDeclaration] })
+     
+    }.toList flatten
+      
   }.toList flatten
-  
   
   def variableDeclarators(l: java.util.List[jp.body.VariableDeclarator]):
     List[VariableDeclarator] = l.toList map { a => variableDeclarator(a) }

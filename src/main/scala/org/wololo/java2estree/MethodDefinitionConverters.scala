@@ -42,19 +42,19 @@ object MethodDefinitionConverters {
     )
   }
   
-  def fromConstructorDeclaration(x: jp.body.ConstructorDeclaration) = new MethodDefinition(
+  def fromConstructorDeclaration(x: jp.body.ConstructorDeclaration, fieldInits: List[Statement]) = new MethodDefinition(
     new Identifier("constructor"),
     new FunctionExpression(x.getParameters map identifier,
-        blockStatement(x.getBlock)),
+        new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)),
     "constructor",
     false,
     Modifier.isStatic(x.getModifiers)
   )
   
-  def fromConstructorDeclarationOverloads(x: Iterable[jp.body.ConstructorDeclaration]) = x map { x => new MethodDefinition(
+  def fromConstructorDeclarationOverloads(x: Iterable[jp.body.ConstructorDeclaration], fieldInits: List[Statement]) = x map { x => new MethodDefinition(
     new Identifier("constructor"),
       new FunctionExpression(x.getParameters map identifier,
-          blockStatement(x.getBlock)),
+          new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)),
       "constructor",
       false,
       Modifier.isStatic(x.getModifiers)

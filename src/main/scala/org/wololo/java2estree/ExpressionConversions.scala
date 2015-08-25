@@ -51,9 +51,11 @@ object ExpressionConversions extends LazyLogging {
           if (x.getArgs == null) List() else x.getArgs map expression)
     case x: jp.expr.SuperExpr =>
       new Literal("super", "super")
-    case x => {
+    case null =>
+      new Literal("null", "null")
+    /*case x => {
       logger.debug(s"Unexpected expression ($x})")
       new Literal("null", "null")
-    }
+    }*/
   }
 }

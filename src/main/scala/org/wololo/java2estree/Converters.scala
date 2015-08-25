@@ -12,14 +12,21 @@ import MethodDefinitionConverters._
 import com.typesafe.scalalogging.LazyLogging
 
 object Converters extends LazyLogging {
-  def program(cu : jp.CompilationUnit) : Program = new Program("module",
-    if (cu.getTypes == null) List() else cu.getTypes map classDeclaration)
+  def program(cu : jp.CompilationUnit) : Program = {
+    val sss = if (cu.getTypes == null) List() else classDeclaration(cu.getTypes.get(0))
+    new Program("module", sss)
+  }
   
-  def classDeclaration(td : jp.body.TypeDeclaration) =
-    new ClassDeclaration(new Identifier(td.getName), classBody(td.getMembers))
-  
-  def classExpression(cd : jp.body.ClassOrInterfaceDeclaration) =
-    new ClassExpression(classBody(cd.getMembers))
+  def classDeclaration(td : jp.body.TypeDeclaration): Iterable[Statement] = {
+    val (body, statics) = classBody(td.getMembers)
+    val declaration = new ClassDeclaration(new Identifier(td.getName), body)
+    List(declaration) ++ statics
+  }
+    
+  def classExpression(cd : jp.body.ClassOrInterfaceDeclaration) = {
+    val (body, statics) = classBody(cd.getMembers)
+    new ClassExpression(body)
+  }
   
   def identifier(p : jp.body.Parameter) = new Identifier(p.getId.getName)
   
@@ -30,21 +37,27 @@ object Converters extends LazyLogging {
     new BlockStatement(
         if (bs.getStmts == null) List() else bs.getStmts map statement)  
   
-  def classBody(l: java.util.List[jp.body.BodyDeclaration]): ClassBody = {
+  /**
+   * @return A tuple with a ClassBody and any static statements that found in the BodyDeclaration
+   */
+  def classBody(l: java.util.List[jp.body.BodyDeclaration]): (ClassBody, Iterable[Statement]) = {
     val types = l.groupBy(_.getClass)
     
-    val fields = types.collect {
+    val memberFields = types.collect {
       case (g, l) if g == classOf[jp.body.FieldDeclaration] => 
-        l.map { x => fromFieldDeclaration(x.asInstanceOf[jp.body.FieldDeclaration]) } flatten
+        l.map { x => fromFieldDeclarationMember(x.asInstanceOf[jp.body.FieldDeclaration]) } flatten
     } flatten
     
-    val fieldInits = List[Statement]()
+    val staticFields = types.collect {
+      case (g, l) if g == classOf[jp.body.FieldDeclaration] => 
+        l.map { x => fromFieldDeclarationStatic(x.asInstanceOf[jp.body.FieldDeclaration]) } flatten
+    } flatten
     
     val constructor = types.collect {
       case (g, l) if g == classOf[jp.body.ConstructorDeclaration] && l.length == 1 => 
-        l.map { x => fromConstructorDeclaration(x.asInstanceOf[jp.body.ConstructorDeclaration], fieldInits) }
+        l.map { x => fromConstructorDeclaration(x.asInstanceOf[jp.body.ConstructorDeclaration], memberFields) }
       case (g, l) if g == classOf[jp.body.ConstructorDeclaration] && l.length > 1 => 
-        fromConstructorDeclarationOverloads(l.map { _.asInstanceOf[jp.body.ConstructorDeclaration] }, fieldInits)
+        fromConstructorDeclarationOverloads(l.map { _.asInstanceOf[jp.body.ConstructorDeclaration] }, memberFields)
     } flatten
     
     val methods = types.collect {
@@ -57,13 +70,24 @@ object Converters extends LazyLogging {
       } flatten
     } flatten
     
-    val classes = types.collect {
+    val memberInnerCasses = types.collect {
       case (g, l) if g == classOf[jp.body.ClassOrInterfaceDeclaration] =>
-        l.map { x => fromClassOrInterfaceDeclaration(x.asInstanceOf[jp.body.ClassOrInterfaceDeclaration])}
+        l.map { x => 
+          fromClassOrInterfaceDeclarationMember(x.asInstanceOf[jp.body.ClassOrInterfaceDeclaration])
+        }.filter(_ != null)
     } flatten
     
-    new ClassBody(constructor ++ fields ++ methods ++ classes)
+    val staticInnerClasses = types.collect {
+      case (g, l) if g == classOf[jp.body.ClassOrInterfaceDeclaration] =>
+        val ll = l.map { x => 
+          fromClassOrInterfaceDeclarationStatic(x.asInstanceOf[jp.body.ClassOrInterfaceDeclaration])
+        }.filter(_ != null)
+        ll
+    } flatten
+    
+    (
+        new ClassBody(constructor ++ methods),// ++ classes),
+        staticFields ++ staticInnerClasses
+    )
   }
-    
-    
 }

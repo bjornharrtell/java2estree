@@ -29,20 +29,24 @@ object MethodDefinitionConverters {
     )
   }
   
-  def fromFieldDeclaration(declaration: jp.body.FieldDeclaration) = declaration.getVariables.toList map { field =>
-    // TODO: need setter and private/hidden member in class if non-final
-    new MethodDefinition(
-      new Identifier(field.getId.getName),
-      new FunctionExpression(List(), new BlockStatement(
-          if (field.getInit == null) List() else
-            List(new ReturnStatement(field.getInit)))),
-      "get",
-      false,
-      Modifier.isStatic(declaration.getModifiers)
-    )
+  def fromFieldDeclarationMember(declaration: jp.body.FieldDeclaration) = 
+    declaration.getVariables.toList collect {
+      case field if !Modifier.isStatic(declaration.getModifiers) =>
+        new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
+        new ThisExpression(), new Identifier(field.getId.getName), false),
+        field.getInit))
   }
   
-  def fromConstructorDeclaration(x: jp.body.ConstructorDeclaration, fieldInits: List[Statement]) = new MethodDefinition(
+  def fromFieldDeclarationStatic(declaration: jp.body.FieldDeclaration) = 
+    declaration.getVariables.toList collect { 
+      case field if Modifier.isStatic(declaration.getModifiers) =>
+        new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
+        new Identifier(declaration.getParentNode.asInstanceOf[jp.body.ClassOrInterfaceDeclaration].getName),
+        new Identifier(field.getId.getName), false),
+        field.getInit))
+  }
+  
+  def fromConstructorDeclaration(x: jp.body.ConstructorDeclaration, fieldInits: Iterable[Statement]) = new MethodDefinition(
     new Identifier("constructor"),
     new FunctionExpression(x.getParameters map identifier,
         new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)),
@@ -51,7 +55,7 @@ object MethodDefinitionConverters {
     Modifier.isStatic(x.getModifiers)
   )
   
-  def fromConstructorDeclarationOverloads(x: Iterable[jp.body.ConstructorDeclaration], fieldInits: List[Statement]) = x map { x => new MethodDefinition(
+  def fromConstructorDeclarationOverloads(x: Iterable[jp.body.ConstructorDeclaration], fieldInits: Iterable[Statement]) = x map { x => new MethodDefinition(
     new Identifier("constructor"),
       new FunctionExpression(x.getParameters map identifier,
           new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)),
@@ -61,13 +65,19 @@ object MethodDefinitionConverters {
     )
   }
   
-  def fromClassOrInterfaceDeclaration(x: jp.body.ClassOrInterfaceDeclaration) = new MethodDefinition(
-    new Identifier(x.getName),
-    new FunctionExpression(List(),
-        new BlockStatement(List(new ReturnStatement(classExpression(x))))),
-        //blockStatement(classDeclaration(x))),
-    "get",
-    false,
-    Modifier.isStatic(x.getModifiers)
-  )
+  def fromClassOrInterfaceDeclarationMember(x: jp.body.ClassOrInterfaceDeclaration) : ExpressionStatement = 
+    if (!Modifier.isStatic(x.getModifiers)) {
+        new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
+        new ThisExpression(),
+        new Identifier(x.getName), false),
+        classExpression(x)))
+    } else null
+    
+  def fromClassOrInterfaceDeclarationStatic(x: jp.body.ClassOrInterfaceDeclaration) : ExpressionStatement = 
+    if (Modifier.isStatic(x.getModifiers)) {
+        new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
+        new Identifier(x.getParentNode.asInstanceOf[jp.body.ClassOrInterfaceDeclaration].getName),
+        new Identifier(x.getName), false),
+        classExpression(x)))
+    } else null
 }

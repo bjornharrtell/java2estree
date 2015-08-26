@@ -30,6 +30,11 @@ class IfStatement (
   val alternate: Statement = null
 ) extends Statement
 
+class SwitchStatement (
+  val discriminant: Expression,
+  val cases: Iterable[SwitchCase]
+) extends Statement
+
 class ReturnStatement (
   val argument: Expression
 ) extends Statement
@@ -55,10 +60,9 @@ class FunctionDeclaration (
 ) extends Function(params, body) with Declaration
 
 class VariableDeclaration (
-  val declarations: Iterable[VariableDeclarator]
-) extends Declaration {
+  val declarations: Iterable[VariableDeclarator],
   val kind: String = "var"
-}
+) extends Declaration
 
 class VariableDeclarator (
   val id: Pattern,
@@ -144,6 +148,11 @@ class ClassDeclaration (
 ) extends Statement
 
 // Clauses
+
+class SwitchCase (
+  val test: Expression,
+  val consequent: Iterable[Statement]
+) extends Node
 
 class CatchClause (
   val param: Pattern,

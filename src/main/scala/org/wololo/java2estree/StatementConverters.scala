@@ -41,7 +41,7 @@ object StatementConverters {
   def statement(es: jp.stmt.ExpressionStmt): Statement =
     es.getExpression match {
     case x: jp.expr.VariableDeclarationExpr =>
-      new VariableDeclaration(x.getVars map variableDeclarator)
+      new VariableDeclaration(x.getVars map variableDeclarator, "let")
     case x: jp.expr.Expression => new ExpressionStatement(x)
   }
 }

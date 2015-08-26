@@ -66,7 +66,7 @@ object Converters extends LazyLogging {
         case (g, l) if l.length == 1 =>
           List(fromMethodDeclaration(l(0).asInstanceOf[jp.body.MethodDeclaration]))
         case (g, l) if l.length > 1 =>
-          fromMethodDeclarationOverloads(l.map { _.asInstanceOf[jp.body.MethodDeclaration] })
+          List(fromMethodDeclarationOverloads(l.map { _.asInstanceOf[jp.body.MethodDeclaration] }))
       } flatten
     } flatten
     

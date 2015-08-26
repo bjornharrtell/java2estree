@@ -19,13 +19,34 @@ object MethodDefinitionConverters {
     Modifier.isStatic(x.getModifiers)
   )
  
-  def fromMethodDeclarationOverloads(x: Iterable[jp.body.MethodDeclaration]) = x map { x => new MethodDefinition(
-    new Identifier(x.getName),
-      new FunctionExpression(x.getParameters map identifier,
-          blockStatement(x.getBody)),
+  def fromMethodDeclarationOverloads(x: Iterable[jp.body.MethodDeclaration]) = {
+    
+    def parseSameArgLength(declarations: Iterable[jp.body.MethodDeclaration]) = {
+      // TODO: extract arguments as variables
+      // TODO: consider multiple declarations, switch them on parameter type
+      declarations.head.getBody.getStmts map statement
+    }
+    
+    def parseAll(x: Iterable[jp.body.MethodDeclaration]) : BlockStatement = {
+      val cases = x.groupBy { _.getParameters.length }.collect {
+        case (k, v) => 
+          new SwitchCase(new Literal(k, k.toString), parseSameArgLength(v))
+      }
+      var switch = new SwitchStatement(
+        new MemberExpression(new Identifier("arguments"), new Identifier("length"), false),
+        cases
+      )
+      new BlockStatement(List(switch))
+    }
+    
+    val name = x.head.getName
+    
+    new MethodDefinition(
+    new Identifier(name),
+      new FunctionExpression(List(), parseAll(x)),
       "method",
       false,
-      Modifier.isStatic(x.getModifiers)
+      false
     )
   }
   

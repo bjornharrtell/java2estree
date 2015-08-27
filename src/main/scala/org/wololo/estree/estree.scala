@@ -100,7 +100,7 @@ class AssignmentExpression (
 
 class CallExpression (
   val callee: Node, // Expression or Super
-  val arguments: Iterable[Expression]
+  val arguments: Iterable[Node] // Expression or SpreadElement
 ) extends Expression
 
 class NewExpression (
@@ -120,9 +120,17 @@ class ClassExpression(
   body: ClassBody
 ) extends Class(body) with Expression
 
+class SpreadElement (
+  val argument: Expression
+) extends Node
+
 // Patterns
 
 trait Pattern extends Node
+
+class RestElement (
+  val argument: Pattern
+) extends Pattern
 
 // Classes
 

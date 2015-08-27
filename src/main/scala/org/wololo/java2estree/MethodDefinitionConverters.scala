@@ -10,6 +10,11 @@ import ExpressionConversions._
 import StatementConverters._
 
 object MethodDefinitionConverters {
+  def toFunctionExpression(x: jp.body.MethodDeclaration) = new FunctionExpression(
+    x.getParameters map identifier,
+    blockStatement(x.getBody)
+  )
+  
   def fromMethodDeclaration(x: jp.body.MethodDeclaration) = new MethodDefinition(
     new Identifier(x.getName),
     new FunctionExpression(x.getParameters map identifier,
@@ -22,9 +27,14 @@ object MethodDefinitionConverters {
   def fromMethodDeclarationOverloads(x: Iterable[jp.body.MethodDeclaration]) = {
     
     def parseSameArgLength(declarations: Iterable[jp.body.MethodDeclaration]) = {
-      // TODO: extract arguments as variables
-      // TODO: consider multiple declarations, switch them on parameter type
-      declarations.head.getBody.getStmts map statement
+      List(
+        // TODO: consider multiple declarations, switch them on parameter type
+        new ExpressionStatement(new CallExpression(
+          toFunctionExpression(declarations.head),
+          List(new SpreadElement(new Identifier("args")))
+        )),
+        new ExpressionStatement(new Identifier("break"))
+      )
     }
     
     def parseAll(x: Iterable[jp.body.MethodDeclaration]) : BlockStatement = {
@@ -33,17 +43,17 @@ object MethodDefinitionConverters {
           new SwitchCase(new Literal(k, k.toString), parseSameArgLength(v))
       }
       var switch = new SwitchStatement(
-        new MemberExpression(new Identifier("arguments"), new Identifier("length"), false),
+        new MemberExpression(new Identifier("args"), new Identifier("length"), false),
         cases
       )
       new BlockStatement(List(switch))
     }
-    
-    val name = x.head.getName
-    
+        
     new MethodDefinition(
-    new Identifier(name),
-      new FunctionExpression(List(), parseAll(x)),
+    new Identifier(x.head.getName),
+      new FunctionExpression(
+          List(new RestElement(new Identifier("args"))),
+          parseAll(x)),
       "method",
       false,
       false

@@ -46,7 +46,7 @@ class MethodSpec extends FlatSpec with Matchers {
      java2js(java) should equal (expected)
   }
   
-  /*
+  
   "Overloaded methods" should "translate into a single method with overload logic" in {
     val java =
 """
@@ -66,15 +66,23 @@ class MethodSpec extends FlatSpec with Matchers {
     val expected =
 """
     class Test {
-      add() {
-        if (arguments.length === 2) {
-          var x = arguments[0], y = arguments[1];
-          return x+y;
-        } else if (arguments.length === 1) {
-          var x = arguments[0];
-          return x;
-        } else {
-          return null;
+      add(...args) {
+        switch (args.length) {
+          case 2:
+            return (function (x, y) {
+              return x + y;
+            })(...args);
+            break;
+          case 1:
+            return (function (x) {
+              return x;
+            })(...args);
+            break;
+          case 0:
+            return (function () {
+              return null;
+            })(...args);
+            break;
         }
       }
     }
@@ -83,5 +91,5 @@ class MethodSpec extends FlatSpec with Matchers {
 
     java2js(java) should equal (expected)
   }
-  */
+  
 }

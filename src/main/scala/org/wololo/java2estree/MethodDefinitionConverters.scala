@@ -29,7 +29,7 @@ object MethodDefinitionConverters {
     def parseSameArgLength(declarations: Iterable[jp.body.MethodDeclaration]) = {
       List(
         // TODO: consider multiple declarations, switch them on parameter type
-        new ExpressionStatement(new CallExpression(
+        new ReturnStatement(new CallExpression(
           toFunctionExpression(declarations.head),
           List(new SpreadElement(new Identifier("args")))
         )),

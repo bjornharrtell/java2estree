@@ -7,14 +7,25 @@ import org.wololo.java2estree.Converters
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.github.javaparser.JavaParser
 import com.google.common.io.CharStreams
+import org.eclipse.jface.text.Document
+import org.eclipse.jdt.core.dom.ASTParser
+import org.eclipse.jdt.core.dom.AST
+import org.eclipse.jdt.core.dom.CompilationUnit
 
 object Utils {
   import org.wololo.java2estree.Converters
   
   def java2js(java: String) : String = {
-    val cu = JavaParser.parse(new StringReader(java), true)
+    val doc = new Document(java);
+    val parser = ASTParser.newParser(AST.JLS8)
+    parser.setResolveBindings(true)
+    parser.setBindingsRecovery(true)
+    parser.setStatementsRecovery(true)
+    parser.setEnvironment(null, null, null, true)
+    parser.setUnitName("Test.java")
+    parser.setSource(doc.get().toCharArray())
+    val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
     val program = Converters.program(cu)
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)

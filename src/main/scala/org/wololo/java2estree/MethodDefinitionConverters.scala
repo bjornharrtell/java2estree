@@ -2,36 +2,30 @@ package org.wololo.java2estree
 
 import org.wololo.estree._
 import scala.collection.JavaConversions._
-import com.github.javaparser.{ ast => jp }
-import java.lang.reflect.Modifier
+import org.eclipse.jdt.core.{ dom => jp }
 import Converters._
-import OperatorConversions._
 import ExpressionConversions._
 import StatementConverters._
+import org.eclipse.jdt.core.dom.Modifier
 
 object MethodDefinitionConverters {
-  def toFunctionExpression(x: jp.body.MethodDeclaration) = new FunctionExpression(
-    x.getParameters map identifier,
+  def toFunctionExpression(x: jp.MethodDeclaration) = new FunctionExpression(
+    x.parameters map { p => identifier(p.asInstanceOf[jp.SingleVariableDeclaration])} ,
     blockStatement(x.getBody)
   )
   
-  def toFunctionExpression(x: jp.body.ConstructorDeclaration) = new FunctionExpression(
-    x.getParameters map identifier,
-    blockStatement(x.getBlock)
-  )
-  
-  def fromMethodDeclaration(x: jp.body.MethodDeclaration) = new MethodDefinition(
-    new Identifier(x.getName),
-    new FunctionExpression(x.getParameters map identifier,
+  def fromMethodDeclaration(x: jp.MethodDeclaration) = new MethodDefinition(
+    identifier(x.getName),
+    new FunctionExpression(x.parameters map { p => identifier(p.asInstanceOf[jp.SingleVariableDeclaration])},
         blockStatement(x.getBody)),
     "method",
     false,
     Modifier.isStatic(x.getModifiers)
   )
  
-  def fromMethodDeclarationOverloads(x: Iterable[jp.body.MethodDeclaration]) = {
+  def fromMethodDeclarationOverloads(x: Iterable[jp.MethodDeclaration]) = {
     
-    def parseSameArgLength(declarations: Iterable[jp.body.MethodDeclaration]) = {
+    def parseSameArgLength(declarations: Iterable[jp.MethodDeclaration]) = {
       List(
         // TODO: consider multiple declarations, switch them on parameter type
         new ReturnStatement(new CallExpression(
@@ -42,8 +36,8 @@ object MethodDefinitionConverters {
       )
     }
     
-    def parseAll(x: Iterable[jp.body.MethodDeclaration]) : BlockStatement = {
-      val cases = x.groupBy { _.getParameters.length }.collect {
+    def parseAll(x: Iterable[jp.MethodDeclaration]) : BlockStatement = {
+      val cases = x.groupBy { _.parameters.length }.collect {
         case (k, v) => 
           new SwitchCase(new Literal(k, k.toString), parseSameArgLength(v))
       }
@@ -55,7 +49,7 @@ object MethodDefinitionConverters {
     }
         
     new MethodDefinition(
-    new Identifier(x.head.getName),
+      identifier(x.head.getName),
       new FunctionExpression(
           List(new RestElement(new Identifier("args"))),
           parseAll(x)),
@@ -65,35 +59,35 @@ object MethodDefinitionConverters {
     )
   }
   
-  def fromFieldDeclarationMember(declaration: jp.body.FieldDeclaration) = 
-    declaration.getVariables.toList collect {
-      case field if !Modifier.isStatic(declaration.getModifiers) =>
+  def fromFieldDeclarationMember(declaration: jp.FieldDeclaration) = 
+    declaration.fragments collect {
+      case field: jp.VariableDeclarationFragment if !Modifier.isStatic(declaration.getModifiers) =>
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-        new ThisExpression(), new Identifier(field.getId.getName), false),
-        field.getInit))
+        new ThisExpression(), new Identifier(field.getName.getIdentifier), false),
+        field.getInitializer))
   }
   
-  def fromFieldDeclarationStatic(declaration: jp.body.FieldDeclaration) = 
-    declaration.getVariables.toList collect { 
-      case field if Modifier.isStatic(declaration.getModifiers) =>
+  def fromFieldDeclarationStatic(declaration: jp.FieldDeclaration) = 
+    declaration.fragments collect { 
+      case field: jp.VariableDeclarationFragment if Modifier.isStatic(declaration.getModifiers) =>
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-        new Identifier(declaration.getParentNode.asInstanceOf[jp.body.ClassOrInterfaceDeclaration].getName),
-        new Identifier(field.getId.getName), false),
-        field.getInit))
+        new Identifier(field.resolveBinding().getDeclaringClass.getName),
+        new Identifier(field.getName.getIdentifier), false),
+        field.getInitializer))
   }
   
-  def fromConstructorDeclaration(x: jp.body.ConstructorDeclaration, fieldInits: Iterable[Statement]) = new MethodDefinition(
-    new Identifier("constructor"),
-    new FunctionExpression(x.getParameters map identifier,
-        new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)),
-    "constructor",
+  def fromConstructorDeclaration(x: jp.MethodDeclaration, fieldInits: Iterable[Statement]) = new MethodDefinition(
+    new Identifier("init_"),
+    new FunctionExpression(x.parameters map { p => identifier(p.asInstanceOf[jp.SingleVariableDeclaration])  },
+        new BlockStatement(fieldInits ++ blockStatement(x.getBody).body)),
+    "method",
     false,
     Modifier.isStatic(x.getModifiers)
   )
   
-  def fromConstructorDeclarationOverloads(x: Iterable[jp.body.ConstructorDeclaration], fieldInits: Iterable[Statement]) = {
+  def fromConstructorDeclarationOverloads(x: Iterable[jp.MethodDeclaration], fieldInits: Iterable[Statement]) = {
     
-    def parseSameArgLength(declarations: Iterable[jp.body.ConstructorDeclaration]) = {
+    def parseSameArgLength(declarations: Iterable[jp.MethodDeclaration]) = {
       List(
         // TODO: consider multiple declarations, switch them on parameter type
         new ReturnStatement(new CallExpression(
@@ -104,8 +98,8 @@ object MethodDefinitionConverters {
       )
     }
     
-    def parseAll(x: Iterable[jp.body.ConstructorDeclaration]) : BlockStatement = {
-      val cases = x.groupBy { _.getParameters.length }.collect {
+    def parseAll(x: Iterable[jp.MethodDeclaration]) : BlockStatement = {
+      val cases = x.groupBy { _.parameters.length }.collect {
         case (k, v) => 
           new SwitchCase(new Literal(k, k.toString), parseSameArgLength(v))
       }
@@ -116,19 +110,19 @@ object MethodDefinitionConverters {
       new BlockStatement(List(switch))
     } 
     
-    new MethodDefinition(new Identifier("constructor"),
+    new MethodDefinition(new Identifier("init_"),
       new FunctionExpression(
           List(new RestElement(new Identifier("args"))),
           parseAll(x)
           //new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)
           ),
-      "constructor",
+      "method",
       false,
       Modifier.isStatic(x.head.getModifiers)
     )
   }
   
-  def fromClassOrInterfaceDeclarationMember(x: jp.body.ClassOrInterfaceDeclaration) : ExpressionStatement = 
+  /*def fromClassOrInterfaceDeclarationMember(x: jp.body.ClassOrInterfaceDeclaration) : ExpressionStatement = 
     if (!Modifier.isStatic(x.getModifiers)) {
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
         new ThisExpression(),
@@ -142,5 +136,5 @@ object MethodDefinitionConverters {
         new Identifier(x.getParentNode.asInstanceOf[jp.body.ClassOrInterfaceDeclaration].getName),
         new Identifier(x.getName), false),
         classExpression(x)))
-    } else null
+    } else null*/
 }

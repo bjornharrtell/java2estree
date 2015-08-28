@@ -57,7 +57,7 @@ object Converters extends LazyLogging {
       case (g, l) if g == classOf[jp.body.ConstructorDeclaration] && l.length == 1 => 
         List(fromConstructorDeclaration(l(0).asInstanceOf[jp.body.ConstructorDeclaration], memberFields))
       case (g, l) if g == classOf[jp.body.ConstructorDeclaration] && l.length > 1 => 
-        fromConstructorDeclarationOverloads(l.map { _.asInstanceOf[jp.body.ConstructorDeclaration] }, memberFields)
+        List(fromConstructorDeclarationOverloads(l.map { _.asInstanceOf[jp.body.ConstructorDeclaration] }, memberFields))
     } flatten
     
     val methods = types.collect {

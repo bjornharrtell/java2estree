@@ -76,12 +76,10 @@ class ConstructorSpec extends FlatSpec with Matchers {
 """
     class Test {
       Test() {
+        
       }
-      
       Test(int x) {
-      }
-      
-      Test(int x, int y) {
+        this();
       }
     }
 """
@@ -89,7 +87,8 @@ class ConstructorSpec extends FlatSpec with Matchers {
     val expected =
 """
     class Test {
-      constructor(x, y) {}
+      constructor(x, y) {
+      }
     }
 
 """

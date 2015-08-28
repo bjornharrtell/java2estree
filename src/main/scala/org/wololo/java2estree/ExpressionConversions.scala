@@ -12,7 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
 object ExpressionConversions extends LazyLogging {
   implicit def expression: PartialFunction[jp.expr.Expression, Expression] = {
     case nl: jp.expr.NullLiteralExpr => new Literal("null", "null")
-    case n: jp.expr.NameExpr => new Identifier(n.getName)
+    case x: jp.expr.NameExpr => new Identifier(x.getName)
     case x: jp.expr.ThisExpr => new ThisExpression()
     case x: jp.expr.AssignExpr =>
       new AssignmentExpression(x.getOperator, x.getTarget, x.getValue)

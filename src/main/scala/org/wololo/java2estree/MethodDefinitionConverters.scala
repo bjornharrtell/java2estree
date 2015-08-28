@@ -15,6 +15,11 @@ object MethodDefinitionConverters {
     blockStatement(x.getBody)
   )
   
+  def toFunctionExpression(x: jp.body.ConstructorDeclaration) = new FunctionExpression(
+    x.getParameters map identifier,
+    blockStatement(x.getBlock)
+  )
+  
   def fromMethodDeclaration(x: jp.body.MethodDeclaration) = new MethodDefinition(
     new Identifier(x.getName),
     new FunctionExpression(x.getParameters map identifier,
@@ -86,13 +91,40 @@ object MethodDefinitionConverters {
     Modifier.isStatic(x.getModifiers)
   )
   
-  def fromConstructorDeclarationOverloads(x: Iterable[jp.body.ConstructorDeclaration], fieldInits: Iterable[Statement]) = x map { x => new MethodDefinition(
-    new Identifier("constructor"),
-      new FunctionExpression(x.getParameters map identifier,
-          new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)),
+  def fromConstructorDeclarationOverloads(x: Iterable[jp.body.ConstructorDeclaration], fieldInits: Iterable[Statement]) = {
+    
+    def parseSameArgLength(declarations: Iterable[jp.body.ConstructorDeclaration]) = {
+      List(
+        // TODO: consider multiple declarations, switch them on parameter type
+        new ReturnStatement(new CallExpression(
+          toFunctionExpression(declarations.head),
+          List(new SpreadElement(new Identifier("args")))
+        )),
+        new ExpressionStatement(new Identifier("break"))
+      )
+    }
+    
+    def parseAll(x: Iterable[jp.body.ConstructorDeclaration]) : BlockStatement = {
+      val cases = x.groupBy { _.getParameters.length }.collect {
+        case (k, v) => 
+          new SwitchCase(new Literal(k, k.toString), parseSameArgLength(v))
+      }
+      var switch = new SwitchStatement(
+        new MemberExpression(new Identifier("args"), new Identifier("length"), false),
+        cases
+      )
+      new BlockStatement(List(switch))
+    } 
+    
+    new MethodDefinition(new Identifier("constructor"),
+      new FunctionExpression(
+          List(new RestElement(new Identifier("args"))),
+          parseAll(x)
+          //new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)
+          ),
       "constructor",
       false,
-      Modifier.isStatic(x.getModifiers)
+      Modifier.isStatic(x.head.getModifiers)
     )
   }
   

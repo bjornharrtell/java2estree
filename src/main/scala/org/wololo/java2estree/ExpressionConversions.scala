@@ -18,6 +18,8 @@ object ExpressionConversions extends LazyLogging {
         // new MemberExpression(new Identifier("this"), new Identifier(x.getFullyQualifiedName), false)
       case vb: jp.IVariableBinding if !vb.isField =>
         new Identifier(x.getFullyQualifiedName)
+      case tb: jp.ITypeBinding =>
+        new Identifier(tb.getName)
       case null =>
         new Identifier(x.getFullyQualifiedName)
     }
@@ -58,9 +60,12 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.MethodInvocation =>
       new CallExpression(new MemberExpression(
           //if (x.getScope == null) new ThisExpression else x.getScope,
+          //new Identifier(x.resolveMethodBinding.),
           new ThisExpression(),
-          new Identifier(x.getName.getIdentifier), false), 
-          List())
+          new Identifier(x.getName.getIdentifier), false),
+          x.arguments map { x => expression(x.asInstanceOf[jp.Expression]) }
+      )
+          //List())
           //if (x.getArgs == null) List() else x.getArgs map expression)
     case x: jp.SuperFieldAccess =>
       new Literal("super", "super")

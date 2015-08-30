@@ -8,11 +8,11 @@ import org.eclipse.jdt.core.{ dom => jp }
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment
 
 object StatementConverters {
-  def toStatement: PartialFunction[jp.Statement, Statement] = {
+  def toStatement(s: jp.Statement)(implicit td: jp.TypeDeclaration): Statement = s match {
     case x: jp.EmptyStatement => new EmptyStatement()  
-    case x: jp.ReturnStatement => new ReturnStatement(x.getExpression)
+    case x: jp.ReturnStatement => new ReturnStatement(toExpression(x.getExpression))
     case x: jp.IfStatement =>
-      new IfStatement(x.getExpression, toStatement(x.getThenStatement),
+      new IfStatement(toExpression(x.getExpression), toStatement(x.getThenStatement),
           toStatement(x.getElseStatement))
     case x: jp.ForStatement =>
       // TODO: implement
@@ -25,16 +25,16 @@ object StatementConverters {
           new CallExpression(
               new MemberExpression(
                   new ThisExpression(), new Identifier("init_"), false),
-                  x.arguments map { x => expression(x.asInstanceOf[jp.Expression]) }
+                  x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
       ))
     case x: jp.Block => blockStatement(x)
     case x: jp.VariableDeclarationStatement =>
       new VariableDeclaration(x.fragments map { x => variableDeclarator(x.asInstanceOf[VariableDeclarationFragment]) })
-    case x: jp.ExpressionStatement => new ExpressionStatement(x.getExpression)
+    case x: jp.ExpressionStatement => new ExpressionStatement(toExpression(x.getExpression))
     // TODO: new TryStatement(blockStatement(x.getTryBlock)) and call catches
     // switched on exception type
     case x: jp.TryStatement => blockStatement(x.getBody)
-    case x: jp.ThrowStatement => new ThrowStatement(x.getExpression)
+    case x: jp.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case null => null
     //case x => {
       //logger.debug(s"Unexpected statement (${if (x==null) x else x.toString()})")

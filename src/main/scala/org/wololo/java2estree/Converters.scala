@@ -17,7 +17,7 @@ object Converters extends LazyLogging {
   }
   
   def classDeclaration(td: jp.TypeDeclaration): Iterable[Statement] = {
-    val (body, statics) = classBody(td.getFields, td.getMethods)
+    val (body, statics) = toClassBody(td)
     val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body)
     List(declaration) ++ statics
   }
@@ -30,18 +30,20 @@ object Converters extends LazyLogging {
   def identifier(p: jp.SingleVariableDeclaration): Identifier = identifier(p.getName)
   def identifier(p: jp.SimpleName): Identifier = new Identifier(p.getIdentifier)
   
-  def variableDeclarator(vd: jp.VariableDeclarationFragment) =
-    new VariableDeclarator(identifier(vd.getName), vd.getInitializer)
+  def variableDeclarator(vd: jp.VariableDeclarationFragment)(implicit td: jp.TypeDeclaration) =
+    new VariableDeclarator(identifier(vd.getName), toExpression(vd.getInitializer))
   
-  def blockStatement(bs: jp.Block) =
+  def blockStatement(bs: jp.Block)(implicit td: jp.TypeDeclaration) =
     new BlockStatement(
         bs.statements map { statement => toStatement(statement.asInstanceOf[jp.Statement])})
   
   /**
    * @return A tuple with a ClassBody and any static statements that found in the BodyDeclaration
    */
-  def classBody(fields: Array[jp.FieldDeclaration],
-      methods: Array[jp.MethodDeclaration]): (ClassBody, Iterable[Statement]) = {
+  def toClassBody(implicit td: jp.TypeDeclaration): (ClassBody, Iterable[Statement]) = {
+    
+    val fields = td.getFields
+    val methods = td.getMethods
 
     val memberFields = fields map { fromFieldDeclarationMember(_) } flatten
     val staticFields = fields map { fromFieldDeclarationStatic(_) } flatten

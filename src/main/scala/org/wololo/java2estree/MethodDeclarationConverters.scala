@@ -31,8 +31,8 @@ object MethodDefinitionConverters {
         new ReturnStatement(new CallExpression(
           toFunctionExpression(declarations.head),
           List(new SpreadElement(new Identifier("args")))
-        )),
-        new ExpressionStatement(new Identifier("break"))
+        ))//,
+        //new ExpressionStatement(new Identifier("break"))
       )
     }
     
@@ -93,8 +93,8 @@ object MethodDefinitionConverters {
         new ReturnStatement(new CallExpression(
           toFunctionExpression(declarations.head),
           List(new SpreadElement(new Identifier("args")))
-        )),
-        new ExpressionStatement(new Identifier("break"))
+        ))//,
+        //new ExpressionStatement(new Identifier("break"))
       )
     }
     

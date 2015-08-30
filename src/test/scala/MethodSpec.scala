@@ -19,6 +19,10 @@ class MethodSpec extends FlatSpec with Matchers {
     val expected =
 """
     class Test {
+      constructor(...args) {
+        this.init_(...args);
+      }
+      init_() {}
       add() {}
     }
 
@@ -39,6 +43,10 @@ class MethodSpec extends FlatSpec with Matchers {
     val expected =
 """
     class Test {
+      constructor(...args) {
+        this.init_(...args);
+      }
+      init_() {}
       add(x, y) {}
     }
 
@@ -66,23 +74,24 @@ class MethodSpec extends FlatSpec with Matchers {
     val expected =
 """
     class Test {
+      constructor(...args) {
+        this.init_(...args);
+      }
+      init_() {}
       add(...args) {
         switch (args.length) {
           case 2:
             return (function (x, y) {
               return x + y;
             })(...args);
-            break;
           case 1:
             return (function (x) {
               return x;
             })(...args);
-            break;
           case 0:
             return (function () {
               return null;
             })(...args);
-            break;
         }
       }
     }

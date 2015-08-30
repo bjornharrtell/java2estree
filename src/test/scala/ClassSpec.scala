@@ -17,7 +17,12 @@ class ClassSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    class Test {}
+    class Test {
+      constructor(...args) {
+        this.init_(...args);
+      }
+      init_() {}
+    }
 
 """
 

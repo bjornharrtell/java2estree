@@ -37,16 +37,16 @@ object Converters extends LazyLogging {
     new BlockStatement(
         bs.statements map { statement => toStatement(statement.asInstanceOf[jp.Statement])})
   
-  def createConstructor() = {
+  def createConstructor = {
     new MethodDefinition(
       new Identifier("constructor"),
       new FunctionExpression(
         List(new RestElement(new Identifier("args"))),
         new BlockStatement(List(new ExpressionStatement(
             new CallExpression(
-                new Identifier("init_"),
-                List(new SpreadElement(new Identifier("args"))
-                ))))
+              new MemberExpression(new ThisExpression(), new Identifier("init_"), false),
+              List(new SpreadElement(new Identifier("args"))
+              ))))
         )),
       "constructor",
       false,
@@ -66,15 +66,21 @@ object Converters extends LazyLogging {
     val memberFields = fields map { fromFieldDeclarationMember(_) } flatten
     val staticFields = fields map { fromFieldDeclarationStatic(_) } flatten
     
-    // TODO: make simple constructor if there is no overloads
-    
-    val constructor = createConstructor()
+    // TODO: make simple constructor if there are no overloads
     
     val constructors = methods filter { _.isConstructor() }
     val initMethod = if (constructors.length == 1)
-      List(fromConstructorDeclaration(constructors.head, memberFields))
-      else if (constructors.length > 1) List(fromConstructorDeclarationOverloads(constructors, memberFields))
-      else List()
+      fromConstructorDeclaration(constructors.head, memberFields)
+      else if (constructors.length > 1) fromConstructorDeclarationOverloads(constructors, memberFields)
+      else new MethodDefinition(
+          new Identifier("init_"),
+          new FunctionExpression(List(), new BlockStatement(List())),
+          "method",
+          false,
+          false
+      )
+      
+    val constructor = createConstructor
     
     val memberMethods = methods.filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
         case (name, methods) if methods.length == 1 =>
@@ -95,7 +101,7 @@ object Converters extends LazyLogging {
     val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationStatic(_) }
         
     (
-        new ClassBody((constructor +: initMethod) ++ memberMethods ++ staticMethods),// ++ classes),
+        new ClassBody(List(constructor, initMethod) ++ memberMethods ++ staticMethods),// ++ classes),
         staticFields ++ staticInnerClasses
     )
   }

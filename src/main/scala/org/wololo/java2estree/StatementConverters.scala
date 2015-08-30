@@ -12,7 +12,8 @@ object StatementConverters {
     case x: jp.EmptyStatement => new EmptyStatement()  
     case x: jp.ReturnStatement => new ReturnStatement(toExpression(x.getExpression))
     case x: jp.IfStatement =>
-      new IfStatement(toExpression(x.getExpression), toStatement(x.getThenStatement),
+      new IfStatement(toExpression(x.getExpression),
+          toStatement(x.getThenStatement),
           toStatement(x.getElseStatement))
     case x: jp.ForStatement =>
       // TODO: implement
@@ -30,12 +31,12 @@ object StatementConverters {
     case x: jp.Block => blockStatement(x)
     case x: jp.VariableDeclarationStatement =>
       new VariableDeclaration(x.fragments map { x => variableDeclarator(x.asInstanceOf[VariableDeclarationFragment]) })
-    case x: jp.ExpressionStatement => new ExpressionStatement(toExpression(x.getExpression))
-    // TODO: new TryStatement(blockStatement(x.getTryBlock)) and call catches
-    // switched on exception type
+    case x: jp.ExpressionStatement =>
+      new ExpressionStatement(toExpression(x.getExpression))
+    
     case x: jp.TryStatement =>
+      // TODO: catch switched on exception type
       new TryStatement(blockStatement(x.getBody))
-      //blockStatement(x.getBody)
     case x: jp.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case null => null
     //case x => {

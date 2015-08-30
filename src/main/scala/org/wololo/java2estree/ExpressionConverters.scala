@@ -5,6 +5,7 @@ import org.wololo.estree._
 import org.eclipse.jdt.core.{ dom => jp }
 import com.typesafe.scalalogging.LazyLogging
 import org.eclipse.jdt.core.dom.TypeDeclaration
+import org.eclipse.jdt.core.dom.Modifier
 
 object ExpressionConversions extends LazyLogging {
   def toExpression(e: jp.Expression)(implicit td: jp.TypeDeclaration): Expression = e match {
@@ -13,6 +14,8 @@ object ExpressionConversions extends LazyLogging {
       case s: jp.SimpleName => s.resolveBinding match { 
         case b: jp.IVariableBinding if b.isParameter() =>
           new Identifier(s.getFullyQualifiedName)
+        case b: jp.IVariableBinding if !b.isField() =>
+           new Identifier(s.getFullyQualifiedName)
         case b: jp.IVariableBinding if !b.isParameter() =>
           new MemberExpression(new Identifier("this"), new Identifier(x.getFullyQualifiedName), false)
       }
@@ -20,14 +23,15 @@ object ExpressionConversions extends LazyLogging {
         case b: jp.IVariableBinding if b.isParameter() =>
           new Identifier(q.getFullyQualifiedName)
         case b: jp.IVariableBinding if !b.isParameter() =>
-          new MemberExpression(new Identifier("this"), new Identifier(q.getFullyQualifiedName), false)
+          new Identifier(q.getFullyQualifiedName)
         case b: jp.ITypeBinding =>
           new Identifier(q.getFullyQualifiedName)
       }
     }
     case x: jp.ThisExpression => new ThisExpression()
     case x: jp.Assignment =>
-      new AssignmentExpression(x.getOperator.toString, toExpression(x.getLeftHandSide), toExpression(x.getRightHandSide))
+      new AssignmentExpression(x.getOperator.toString,
+          toExpression(x.getLeftHandSide), toExpression(x.getRightHandSide))
     case x: jp.ParenthesizedExpression => toExpression(x.getExpression)
     case x: jp.BooleanLiteral =>
       new Literal(x.booleanValue, x.booleanValue.toString)
@@ -47,7 +51,7 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.InfixExpression =>
       new BinaryExpression(x.getOperator.toString, toExpression(x.getLeftOperand), toExpression(x.getRightOperand))
     case x: jp.InstanceofExpression =>
-      new BinaryExpression("instanceof", toExpression(x.getLeftOperand), 
+      new BinaryExpression("instanceof", toExpression(x.getLeftOperand),
           new Literal(x.getRightOperand.toString, x.getRightOperand.toString))
     case x: jp.CastExpression => toExpression(x.getExpression)
     case x: jp.ClassInstanceCreation =>
@@ -55,11 +59,14 @@ object ExpressionConversions extends LazyLogging {
           new Identifier(x.getType.toString), x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) })
     case x: jp.FieldAccess =>
       new MemberExpression(
-          new ThisExpression,
+          new ThisExpression(),
           new Identifier(x.getName.getIdentifier), false)
     case x: jp.MethodInvocation =>
       new CallExpression(new MemberExpression(
-          new ThisExpression(),
+          if (td.resolveBinding().getKey == x.resolveMethodBinding.getDeclaringClass.getKey &&
+              !Modifier.isStatic(x.resolveMethodBinding.getModifiers))
+            new ThisExpression else 
+            new Identifier(x.resolveMethodBinding.getDeclaringClass.getName),
           new Identifier(x.getName.getIdentifier), false),
           x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
       )

@@ -27,6 +27,7 @@ object Converters extends LazyLogging {
   }
   
   def identifier(p: jp.SingleVariableDeclaration): Identifier = identifier(p.getName)
+  
   def identifier(p: jp.SimpleName): Identifier = new Identifier(p.getIdentifier)
   
   def variableDeclarator(vd: jp.VariableDeclarationFragment)(implicit td: jp.TypeDeclaration) =
@@ -88,8 +89,8 @@ object Converters extends LazyLogging {
         case (name, methods) if methods.length > 1 =>
           List(fromMethodDeclarationOverloads(methods))
     } flatten
-   
     
+    // TODO: Member inner classes should probably defined as getters
     val memberInnerCasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
     val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationStatic(_) }
         

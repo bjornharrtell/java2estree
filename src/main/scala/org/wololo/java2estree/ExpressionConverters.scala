@@ -73,7 +73,11 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.SuperFieldAccess =>
       new Literal("super", "super")
     case x: jp.SuperMethodInvocation =>
-      new Literal("super", "super")
+      new CallExpression(new MemberExpression(
+          new Identifier("super"),
+          new Identifier(x.getName.getIdentifier), false),
+          x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
+      )
     case null =>
       new Literal("null", "null")
     /*case x => {

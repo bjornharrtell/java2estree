@@ -121,19 +121,15 @@ object MethodDefinitionConverters {
     )
   }
   
-  /*def fromClassOrInterfaceDeclarationMember(x: jp.body.ClassOrInterfaceDeclaration) : ExpressionStatement = 
-    if (!Modifier.isStatic(x.getModifiers)) {
+  def fromClassOrInterfaceDeclarationMember(x: jp.TypeDeclaration)(implicit td: jp.TypeDeclaration) : ExpressionStatement = 
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
         new ThisExpression(),
-        new Identifier(x.getName), false),
+        new Identifier(x.getName.getIdentifier), false),
         classExpression(x)))
-    } else null
     
-  def fromClassOrInterfaceDeclarationStatic(x: jp.body.ClassOrInterfaceDeclaration) : ExpressionStatement = 
-    if (Modifier.isStatic(x.getModifiers)) {
+  def fromClassOrInterfaceDeclarationStatic(x: jp.TypeDeclaration)(implicit td: jp.TypeDeclaration) : ExpressionStatement = 
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-        new Identifier(x.getParentNode.asInstanceOf[jp.body.ClassOrInterfaceDeclaration].getName),
-        new Identifier(x.getName), false),
+        new Identifier(td.getName.getIdentifier),
+        new Identifier(x.getName.getIdentifier), false),
         classExpression(x)))
-    } else null*/
 }

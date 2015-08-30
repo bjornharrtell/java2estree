@@ -21,10 +21,10 @@ object Converters extends LazyLogging {
     List(declaration) ++ statics
   }
     
-  /*def classExpression(cd : jp.body.ClassOrInterfaceDeclaration) = {
-    val (body, statics) = classBody(cd.getMembers)
+  def classExpression(td : jp.TypeDeclaration) = {
+    val (body, statics) = toClassBody(td)
     new ClassExpression(body)
-  }*/
+  }
   
   def identifier(p: jp.SingleVariableDeclaration): Identifier = identifier(p.getName)
   def identifier(p: jp.SimpleName): Identifier = new Identifier(p.getIdentifier)
@@ -60,6 +60,7 @@ object Converters extends LazyLogging {
     
     val fields = td.getFields
     val methods = td.getMethods
+    val types = td.getTypes
 
     val memberFields = fields map { fromFieldDeclarationMember(_) } flatten
     val staticFields = fields map { fromFieldDeclarationStatic(_) } flatten
@@ -88,26 +89,13 @@ object Converters extends LazyLogging {
           List(fromMethodDeclarationOverloads(methods))
     } flatten
    
-    /*
-    val memberInnerCasses = types.collect {
-      case (g, l) if g == classOf[jp.body.ClassOrInterfaceDeclaration] =>
-        l.map { x => 
-          fromClassOrInterfaceDeclarationMember(x.asInstanceOf[jp.body.ClassOrInterfaceDeclaration])
-        }.filter(_ != null)
-    } flatten
     
-    val staticInnerClasses = types.collect {
-      case (g, l) if g == classOf[jp.body.ClassOrInterfaceDeclaration] =>
-        val ll = l.map { x => 
-          fromClassOrInterfaceDeclarationStatic(x.asInstanceOf[jp.body.ClassOrInterfaceDeclaration])
-        }.filter(_ != null)
-        ll
-    } flatten
-    */
-    
+    val memberInnerCasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
+    val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationStatic(_) }
+        
     (
         new ClassBody((constructor +: initMethod) ++ memberMethods ++ staticMethods),// ++ classes),
-        staticFields//++ staticInnerClasses
+        staticFields ++ staticInnerClasses
     )
   }
 }

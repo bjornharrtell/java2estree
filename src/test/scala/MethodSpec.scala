@@ -81,15 +81,15 @@ class MethodSpec extends FlatSpec with Matchers {
       add(...args) {
         switch (args.length) {
           case 2:
-            return (function (x, y) {
+            return ((x, y) => {
               return x + y;
             })(...args);
           case 1:
-            return (function (x) {
+            return ((x) => {
               return x;
             })(...args);
           case 0:
-            return (function () {
+            return (() => {
               return null;
             })(...args);
         }

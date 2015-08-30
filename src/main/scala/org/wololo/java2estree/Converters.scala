@@ -34,8 +34,11 @@ object Converters extends LazyLogging {
     new VariableDeclarator(identifier(vd.getName), toExpression(vd.getInitializer))
   
   def blockStatement(bs: jp.Block)(implicit td: jp.TypeDeclaration) =
-    new BlockStatement(
-        bs.statements map { statement => toStatement(statement.asInstanceOf[jp.Statement])})
+    if (bs == null)
+      new BlockStatement(List())
+    else
+      new BlockStatement(
+        bs.statements collect { case statement: jp.Statement => toStatement(statement)})
   
   def createConstructor = {
     new MethodDefinition(

@@ -32,14 +32,16 @@ object ExpressionConversions extends LazyLogging {
         case b: jp.IVariableBinding if !b.isParameter() =>
           new MemberExpression(new Identifier("this"), new Identifier(x.getFullyQualifiedName), false)
       }
-      case q: jp.QualifiedName => q.getQualifier.resolveBinding match { 
-        case b: jp.IVariableBinding if b.isParameter() =>
-          new Identifier(q.getFullyQualifiedName)
-        case b: jp.IVariableBinding if !b.isParameter() =>
-          new Identifier(q.getFullyQualifiedName)
-        case b: jp.ITypeBinding =>
-          new Identifier(q.getFullyQualifiedName)
-      }
+      case q: jp.QualifiedName => 
+        if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding")
+        q.getQualifier.resolveBinding match { 
+          case b: jp.IVariableBinding if b.isParameter() =>
+            new Identifier(q.getFullyQualifiedName)
+          case b: jp.IVariableBinding if !b.isParameter() =>
+            new Identifier(q.getFullyQualifiedName)
+          case b: jp.ITypeBinding =>
+            new Identifier(q.getFullyQualifiedName)
+        }
     }
     case x: jp.ThisExpression => new ThisExpression()
     case x: jp.Assignment =>
@@ -77,10 +79,12 @@ object ExpressionConversions extends LazyLogging {
           new ThisExpression(),
           new Identifier(x.getName.getIdentifier), false)
     case x: jp.MethodInvocation =>
+      if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding")
       new CallExpression(new MemberExpression(
           if (td.resolveBinding().getKey == x.resolveMethodBinding.getDeclaringClass.getKey &&
               !Modifier.isStatic(x.resolveMethodBinding.getModifiers))
-            new ThisExpression else 
+            new ThisExpression
+          else 
             new Identifier(x.resolveMethodBinding.getDeclaringClass.getName),
           new Identifier(x.getName.getIdentifier), false),
           x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }

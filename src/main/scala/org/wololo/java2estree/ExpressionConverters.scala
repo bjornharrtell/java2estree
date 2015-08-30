@@ -9,6 +9,25 @@ import org.eclipse.jdt.core.dom.TypeDeclaration
 import org.eclipse.jdt.core.dom.Modifier
 
 object ExpressionConversions extends LazyLogging {
+  def resolveSimpleName(s: jp.SimpleName) = s.resolveBinding match { 
+    case b: jp.IVariableBinding if b.isParameter() =>
+      new Identifier(s.getFullyQualifiedName)
+    case b: jp.IVariableBinding if !b.isField() =>
+       new Identifier(s.getFullyQualifiedName)
+    case b: jp.IVariableBinding if !b.isParameter() =>
+      new MemberExpression(new Identifier("this"), new Identifier(s.getFullyQualifiedName), false)
+  }
+  
+  def resolveQualifiedName(q: jp.QualifiedName) = {
+    if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding")
+    q.getQualifier.resolveBinding match { 
+      case b: jp.IVariableBinding =>
+        new Identifier(q.getFullyQualifiedName)
+      case b: jp.ITypeBinding =>
+        new Identifier(q.getFullyQualifiedName)
+    }
+  }
+  
   def toOp(op: String) = op match {
     case "==" => "===" 
     case "!=" => "!=="
@@ -23,26 +42,8 @@ object ExpressionConversions extends LazyLogging {
   
   def toExpression(e: jp.Expression)(implicit td: jp.TypeDeclaration): Expression = e match {
     case nl: jp.NullLiteral => new Literal("null", "null")
-    case x: jp.Name => x match {
-      case s: jp.SimpleName => s.resolveBinding match { 
-        case b: jp.IVariableBinding if b.isParameter() =>
-          new Identifier(s.getFullyQualifiedName)
-        case b: jp.IVariableBinding if !b.isField() =>
-           new Identifier(s.getFullyQualifiedName)
-        case b: jp.IVariableBinding if !b.isParameter() =>
-          new MemberExpression(new Identifier("this"), new Identifier(x.getFullyQualifiedName), false)
-      }
-      case q: jp.QualifiedName => 
-        if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding")
-        q.getQualifier.resolveBinding match { 
-          case b: jp.IVariableBinding if b.isParameter() =>
-            new Identifier(q.getFullyQualifiedName)
-          case b: jp.IVariableBinding if !b.isParameter() =>
-            new Identifier(q.getFullyQualifiedName)
-          case b: jp.ITypeBinding =>
-            new Identifier(q.getFullyQualifiedName)
-        }
-    }
+    case x: jp.SimpleName => resolveSimpleName(x)
+    case x: jp.QualifiedName => resolveQualifiedName(x)
     case x: jp.ThisExpression => new ThisExpression()
     case x: jp.Assignment =>
       new AssignmentExpression(x.getOperator.toString,
@@ -81,7 +82,7 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.MethodInvocation =>
       if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding")
       new CallExpression(new MemberExpression(
-          if (td.resolveBinding().getKey == x.resolveMethodBinding.getDeclaringClass.getKey &&
+          if (td.resolveBinding.getKey == x.resolveMethodBinding.getDeclaringClass.getKey &&
               !Modifier.isStatic(x.resolveMethodBinding.getModifiers))
             new ThisExpression
           else 

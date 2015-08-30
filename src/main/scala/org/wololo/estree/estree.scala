@@ -11,7 +11,8 @@ class Program (
 
 class Function (
   val params: Iterable[Pattern],
-  val body: BlockStatement
+  val body: Node, // BlockStatement | Node
+  val generator: Boolean
 ) extends Node
 
 // Statements
@@ -56,8 +57,9 @@ trait Declaration extends Statement
 class FunctionDeclaration (
   val id: Identifier,
   params: Iterable[Pattern],
-  body: BlockStatement
-) extends Function(params, body) with Declaration
+  body: BlockStatement,
+  generator: Boolean = false
+) extends Function(params, body, generator) with Declaration
 
 class VariableDeclaration (
   val declarations: Iterable[VariableDeclarator],
@@ -77,8 +79,9 @@ class ThisExpression extends Expression
 
 class FunctionExpression (
   params: Iterable[Pattern],
-  body: BlockStatement
-) extends Function(params, body) with Expression
+  body: BlockStatement,
+  generator: Boolean = false
+) extends Function(params, body, generator) with Expression
 
 class UnaryExpression (
   val operator: String,
@@ -114,6 +117,13 @@ class MemberExpression (
   val computed: Boolean
 ) extends Expression with Pattern
 
+class ArrowFunctionExpression(
+  params: Iterable[Pattern],
+  body: Node, // BlockStatement | Expression
+  val expression: Boolean,
+  generator: Boolean = false
+) extends Function(params, body, generator) with Expression
+
 class Super extends Node
 
 class ClassExpression(
@@ -123,6 +133,8 @@ class ClassExpression(
 class SpreadElement (
   val argument: Expression
 ) extends Node
+
+
 
 // Patterns
 

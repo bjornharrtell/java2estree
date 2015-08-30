@@ -9,6 +9,12 @@ import StatementConverters._
 import org.eclipse.jdt.core.dom.Modifier
 
 object MethodDefinitionConverters {
+  def toArrowFunctionExpression(x: jp.MethodDeclaration)(implicit td: jp.TypeDeclaration) = new ArrowFunctionExpression(
+    x.parameters map { p => identifier(p.asInstanceOf[jp.SingleVariableDeclaration])} ,
+    blockStatement(x.getBody),
+    false
+  )
+  
   def toFunctionExpression(x: jp.MethodDeclaration)(implicit td: jp.TypeDeclaration) = new FunctionExpression(
     x.parameters map { p => identifier(p.asInstanceOf[jp.SingleVariableDeclaration])} ,
     blockStatement(x.getBody)
@@ -29,7 +35,7 @@ object MethodDefinitionConverters {
       List(
         // TODO: consider multiple declarations, switch them on parameter type
         new ReturnStatement(new CallExpression(
-          toFunctionExpression(declarations.head),
+          toArrowFunctionExpression(declarations.head),
           List(new SpreadElement(new Identifier("args")))
         ))//,
         //new ExpressionStatement(new Identifier("break"))
@@ -91,7 +97,7 @@ object MethodDefinitionConverters {
       List(
         // TODO: consider multiple declarations, switch them on parameter type
         new ReturnStatement(new CallExpression(
-          toFunctionExpression(declarations.head),
+          toArrowFunctionExpression(declarations.head),
           List(new SpreadElement(new Identifier("args")))
         ))//,
         //new ExpressionStatement(new Identifier("break"))

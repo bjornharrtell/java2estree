@@ -33,7 +33,9 @@ object StatementConverters {
     case x: jp.ExpressionStatement => new ExpressionStatement(toExpression(x.getExpression))
     // TODO: new TryStatement(blockStatement(x.getTryBlock)) and call catches
     // switched on exception type
-    case x: jp.TryStatement => blockStatement(x.getBody)
+    case x: jp.TryStatement =>
+      new TryStatement(blockStatement(x.getBody))
+      //blockStatement(x.getBody)
     case x: jp.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case null => null
     //case x => {

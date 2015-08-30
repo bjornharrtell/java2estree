@@ -113,8 +113,7 @@ object MethodDefinitionConverters {
     new MethodDefinition(new Identifier("init_"),
       new FunctionExpression(
           List(new RestElement(new Identifier("args"))),
-          parseAll(x)
-          //new BlockStatement(fieldInits ++ blockStatement(x.getBlock).body)
+          new BlockStatement(fieldInits ++ parseAll(x).body)
           ),
       "method",
       false,

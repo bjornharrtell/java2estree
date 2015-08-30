@@ -37,20 +37,8 @@ object Converters extends LazyLogging {
     new BlockStatement(
         bs.statements map { statement => toStatement(statement.asInstanceOf[jp.Statement])})
   
-  /**
-   * @return A tuple with a ClassBody and any static statements that found in the BodyDeclaration
-   */
-  def toClassBody(implicit td: jp.TypeDeclaration): (ClassBody, Iterable[Statement]) = {
-    
-    val fields = td.getFields
-    val methods = td.getMethods
-
-    val memberFields = fields map { fromFieldDeclarationMember(_) } flatten
-    val staticFields = fields map { fromFieldDeclarationStatic(_) } flatten
-    
-    // TODO: make simple constructor if there is no overloads
-    
-    val constructor = new MethodDefinition(
+  def createConstructor() = {
+    new MethodDefinition(
       new Identifier("constructor"),
       new FunctionExpression(
         List(new RestElement(new Identifier("args"))),
@@ -64,6 +52,22 @@ object Converters extends LazyLogging {
       false,
       false
     )
+  }
+  
+  /**
+   * @return A tuple with a ClassBody and any static statements that found in the BodyDeclaration
+   */
+  def toClassBody(implicit td: jp.TypeDeclaration): (ClassBody, Iterable[Statement]) = {
+    
+    val fields = td.getFields
+    val methods = td.getMethods
+
+    val memberFields = fields map { fromFieldDeclarationMember(_) } flatten
+    val staticFields = fields map { fromFieldDeclarationStatic(_) } flatten
+    
+    // TODO: make simple constructor if there is no overloads
+    
+    val constructor = createConstructor()
     
     val constructors = methods filter { _.isConstructor() }
     val initMethod = if (constructors.length == 1)

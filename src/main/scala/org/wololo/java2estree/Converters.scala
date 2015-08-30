@@ -3,12 +3,11 @@ package org.wololo.java2estree
 import org.wololo.estree._
 import scala.collection.JavaConversions._
 import org.eclipse.jdt.core.{ dom => jp }
-import java.lang.reflect.Modifier
 import ExpressionConversions._
 import StatementConverters._
 import MethodDefinitionConverters._
-
 import com.typesafe.scalalogging.LazyLogging
+import org.eclipse.jdt.core.dom.Modifier
 
 object Converters extends LazyLogging {
   def program(cu : jp.CompilationUnit) : Program = {
@@ -75,7 +74,14 @@ object Converters extends LazyLogging {
       else if (constructors.length > 1) List(fromConstructorDeclarationOverloads(constructors, memberFields))
       else List()
     
-    val otherMethods = methods.filter(!_.isConstructor()).groupBy(_.getName.getIdentifier).map {
+    val memberMethods = methods.filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
+        case (name, methods) if methods.length == 1 =>
+          List(fromMethodDeclaration(methods.head))
+        case (name, methods) if methods.length > 1 =>
+          List(fromMethodDeclarationOverloads(methods))
+    } flatten
+      
+    val staticMethods = methods.filter(m => !m.isConstructor() && Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
         case (name, methods) if methods.length == 1 =>
           List(fromMethodDeclaration(methods.head))
         case (name, methods) if methods.length > 1 =>
@@ -100,8 +106,8 @@ object Converters extends LazyLogging {
     */
     
     (
-        new ClassBody((constructor +: initMethod) ++ otherMethods),// ++ classes),
-        staticFields //++ staticInnerClasses
+        new ClassBody((constructor +: initMethod) ++ memberMethods ++ staticMethods),// ++ classes),
+        staticFields//++ staticInnerClasses
     )
   }
 }

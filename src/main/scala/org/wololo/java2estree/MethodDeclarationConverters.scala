@@ -47,7 +47,7 @@ object MethodDefinitionConverters {
       )
       new BlockStatement(List(switch))
     }
-        
+    
     new MethodDefinition(
       identifier(x.head.getName),
       new FunctionExpression(
@@ -55,7 +55,7 @@ object MethodDefinitionConverters {
           parseAll(x)),
       "method",
       false,
-      false
+      Modifier.isStatic(x.head.getModifiers)
     )
   }
   

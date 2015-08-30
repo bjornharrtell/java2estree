@@ -1,6 +1,7 @@
 package org.wololo.java2estree
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable.Buffer
 import org.wololo.estree._
 import org.eclipse.jdt.core.{ dom => jp }
 import com.typesafe.scalalogging.LazyLogging
@@ -8,6 +9,18 @@ import org.eclipse.jdt.core.dom.TypeDeclaration
 import org.eclipse.jdt.core.dom.Modifier
 
 object ExpressionConversions extends LazyLogging {
+  def toOp(op: String) = op match {
+    case "==" => "===" 
+    case "!=" => "!=="
+    case x => x
+  }
+  
+  def toBinaryExpression(op: String, l: Buffer[Expression]) : BinaryExpression =
+    if (l.length > 2) 
+      new BinaryExpression(op, l.head, toBinaryExpression(op, l.tail))
+    else
+      new BinaryExpression(op, l.head, l.get(1))
+  
   def toExpression(e: jp.Expression)(implicit td: jp.TypeDeclaration): Expression = e match {
     case nl: jp.NullLiteral => new Literal("null", "null")
     case x: jp.Name => x match {
@@ -49,7 +62,9 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.PostfixExpression =>
       new UnaryExpression(x.getOperator.toString, false, toExpression(x.getOperand))
     case x: jp.InfixExpression =>
-      new BinaryExpression(x.getOperator.toString, toExpression(x.getLeftOperand), toExpression(x.getRightOperand))
+      val ops = Buffer(toExpression(x.getLeftOperand), toExpression(x.getRightOperand))
+      val exops = ops ++ (x.extendedOperands map { a => toExpression(a.asInstanceOf[jp.Expression]) })
+      toBinaryExpression(toOp(x.getOperator.toString), exops)
     case x: jp.InstanceofExpression =>
       new BinaryExpression("instanceof", toExpression(x.getLeftOperand),
           new Literal(x.getRightOperand.toString, x.getRightOperand.toString))

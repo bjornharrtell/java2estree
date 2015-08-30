@@ -9,8 +9,10 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment
 
 object StatementConverters {
   def toStatement(s: jp.Statement)(implicit td: jp.TypeDeclaration): Statement = s match {
-    case x: jp.EmptyStatement => new EmptyStatement()  
-    case x: jp.ReturnStatement => new ReturnStatement(toExpression(x.getExpression))
+    case x: jp.EmptyStatement =>
+      new EmptyStatement()  
+    case x: jp.ReturnStatement =>
+      new ReturnStatement(toExpression(x.getExpression))
     case x: jp.IfStatement =>
       new IfStatement(toExpression(x.getExpression),
           toStatement(x.getThenStatement),

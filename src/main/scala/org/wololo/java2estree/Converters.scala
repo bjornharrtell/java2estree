@@ -63,7 +63,7 @@ object Converters extends LazyLogging {
   def toClassBody(implicit td: jp.TypeDeclaration): (ClassBody, Iterable[Statement]) = {
     
     val fields = td.getFields
-    val methods = td.getMethods
+    val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) }
     val types = td.getTypes
 
     val memberFields = fields map { fromFieldDeclarationMember(_) } flatten

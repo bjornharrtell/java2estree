@@ -10,7 +10,7 @@ import org.eclipse.jdt.core.dom.Modifier
 
 object ExpressionConversions extends LazyLogging {
   def resolveSimpleName(s: jp.SimpleName) = { 
-    //println(s)    
+    //println(s)
     s.resolveBinding match { 
       case b: jp.IVariableBinding if b.isParameter() =>
         new Identifier(s.getFullyQualifiedName)
@@ -90,12 +90,6 @@ object ExpressionConversions extends LazyLogging {
           new Identifier(x.getName.getIdentifier), false)
     case x: jp.MethodInvocation =>
       if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding")
-      
-      if (x.toString == "i.hasNext()"){
-        println(x.getExpression)
-        
-      }
-      //val n = toExpression(x.getExpression)
       new CallExpression(new MemberExpression(
           /*if (td.resolveBinding.getKey == x.resolveMethodBinding.getDeclaringClass.getKey &&
               !Modifier.isStatic(x.resolveMethodBinding.getModifiers))

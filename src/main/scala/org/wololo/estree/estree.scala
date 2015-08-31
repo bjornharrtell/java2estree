@@ -31,6 +31,10 @@ class IfStatement (
   val alternate: Statement = null
 ) extends Statement
 
+class BreakStatement (
+  val label: Identifier = null
+) extends Statement
+
 class SwitchStatement (
   val discriminant: Expression,
   val cases: Iterable[SwitchCase]

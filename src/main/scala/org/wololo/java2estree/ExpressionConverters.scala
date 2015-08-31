@@ -9,16 +9,21 @@ import org.eclipse.jdt.core.dom.TypeDeclaration
 import org.eclipse.jdt.core.dom.Modifier
 
 object ExpressionConversions extends LazyLogging {
-  def resolveSimpleName(s: jp.SimpleName) = s.resolveBinding match { 
-    case b: jp.IVariableBinding if b.isParameter() =>
-      new Identifier(s.getFullyQualifiedName)
-    case b: jp.IVariableBinding if !b.isField() =>
-       new Identifier(s.getFullyQualifiedName)
-    case b: jp.IVariableBinding if !b.isParameter() =>
-      new MemberExpression(new Identifier("this"), new Identifier(s.getFullyQualifiedName), false)
+  def resolveSimpleName(s: jp.SimpleName) = { 
+    //println(s)    
+    s.resolveBinding match { 
+      case b: jp.IVariableBinding if b.isParameter() =>
+        new Identifier(s.getFullyQualifiedName)
+      case b: jp.IVariableBinding if !b.isField() =>
+         new Identifier(s.getFullyQualifiedName)
+      case b: jp.IVariableBinding if !b.isParameter() =>
+        new MemberExpression(new Identifier("this"), new Identifier(s.getFullyQualifiedName), false)
+      case b: jp.ITypeBinding =>
+        new Identifier(s.getFullyQualifiedName)
+    }
   }
-  
   def resolveQualifiedName(q: jp.QualifiedName) = {
+    //println(q)
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding")
     q.getQualifier.resolveBinding match { 
       case b: jp.IVariableBinding =>
@@ -85,12 +90,19 @@ object ExpressionConversions extends LazyLogging {
           new Identifier(x.getName.getIdentifier), false)
     case x: jp.MethodInvocation =>
       if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding")
+      
+      if (x.toString == "i.hasNext()"){
+        println(x.getExpression)
+        
+      }
+      //val n = toExpression(x.getExpression)
       new CallExpression(new MemberExpression(
-          if (td.resolveBinding.getKey == x.resolveMethodBinding.getDeclaringClass.getKey &&
+          /*if (td.resolveBinding.getKey == x.resolveMethodBinding.getDeclaringClass.getKey &&
               !Modifier.isStatic(x.resolveMethodBinding.getModifiers))
             new ThisExpression
           else 
-            new Identifier(x.resolveMethodBinding.getDeclaringClass.getName),
+            new Identifier(x.resolveMethodBinding.getDeclaringClass.getName),*/
+          if (x.getExpression == null) new ThisExpression() else toExpression(x.getExpression),
           new Identifier(x.getName.getIdentifier), false),
           x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
       )

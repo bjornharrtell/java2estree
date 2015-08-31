@@ -57,6 +57,8 @@ object ExpressionConversions extends LazyLogging {
       new Literal(x.getEscapedValue, x.getEscapedValue)
     case x: jp.StringLiteral =>
       new Literal(x.getLiteralValue, x.getEscapedValue)
+    case x: jp.TypeLiteral =>
+      new Literal(x.getType.toString, x.getType.toString)
     case x: jp.ArrayCreation =>
       // TODO: implement
       new Literal("null", "null")

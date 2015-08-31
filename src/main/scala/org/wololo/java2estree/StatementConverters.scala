@@ -49,6 +49,12 @@ object StatementConverters {
                   new ThisExpression(), new Identifier("init_"), false),
                   x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
       ))
+    case x: jp.SuperConstructorInvocation =>
+      val call = new CallExpression(
+          new Super(),
+          x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
+      )
+      new ExpressionStatement(call)
     case x: jp.Block => blockStatement(x)
     case x: jp.VariableDeclarationStatement =>
       new VariableDeclaration(x.fragments map { x => variableDeclarator(x.asInstanceOf[jp.VariableDeclarationFragment]) })

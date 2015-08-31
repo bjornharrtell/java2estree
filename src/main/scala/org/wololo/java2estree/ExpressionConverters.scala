@@ -67,7 +67,8 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.TypeLiteral =>
       new Literal(x.getType.toString, x.getType.toString)
     case x: jp.ArrayCreation =>
-      val elements = x.getInitializer.expressions map { case x: jp.Expression => toExpression(x) }
+      //println(x.getInitializer)
+      val elements = if (x.getInitializer == null) List() else x.getInitializer.expressions map { case x: jp.Expression => toExpression(x) }
       new ArrayExpression(elements)
     case x: jp.ArrayAccess =>
       new MemberExpression(toExpression(x.getArray), toExpression(x.getIndex), true)

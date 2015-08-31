@@ -126,6 +126,12 @@ class AssignmentExpression (
   val right: Expression
 ) extends Expression
 
+class ConditionalExpression (
+  val test: Expression,
+  val alternate: Expression,
+  val consequent: Expression
+) extends Expression
+
 class CallExpression (
   val callee: Node, // Expression or Super
   val arguments: Iterable[Node] // Expression or SpreadElement

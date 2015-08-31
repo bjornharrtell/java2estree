@@ -75,6 +75,8 @@ object ExpressionConversions extends LazyLogging {
       new UnaryExpression(x.getOperator.toString, true, toExpression(x.getOperand))
     case x: jp.PostfixExpression =>
       new UnaryExpression(x.getOperator.toString, false, toExpression(x.getOperand))
+    case x: jp.ConditionalExpression =>
+      new ConditionalExpression(toExpression(x.getExpression), toExpression(x.getElseExpression), toExpression(x.getThenExpression))
     case x: jp.InfixExpression =>
       val ops = Buffer(toExpression(x.getLeftOperand), toExpression(x.getRightOperand))
       val exops = ops ++ (x.extendedOperands map { a => toExpression(a.asInstanceOf[jp.Expression]) })

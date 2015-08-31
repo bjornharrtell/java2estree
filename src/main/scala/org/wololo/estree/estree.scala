@@ -50,6 +50,19 @@ class TryStatement (
   val finalizer: BlockStatement = null
 ) extends Statement
 
+class WhileStatement (
+  val test: Expression,
+  val body: Statement
+) extends Statement
+
+class ForStatement (
+  val init: Node,
+  val test: Expression,
+  val update: Expression,
+  val body: Statement
+) extends Statement
+
+
 // Declarations
 
 trait Declaration extends Statement
@@ -82,6 +95,10 @@ class FunctionExpression (
   body: BlockStatement,
   generator: Boolean = false
 ) extends Function(params, body, generator) with Expression
+
+class SequenceExpression (
+  val expressions: Iterable[Expression]
+) extends Expression
 
 class UnaryExpression (
   val operator: String,

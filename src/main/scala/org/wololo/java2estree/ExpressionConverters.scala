@@ -62,6 +62,8 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.ArrayCreation =>
       // TODO: implement
       new Literal("null", "null")
+    case x: jp.ArrayAccess =>
+      new MemberExpression(toExpression(x.getArray), toExpression(x.getIndex), true)
     case x: jp.PrefixExpression =>
       new UnaryExpression(x.getOperator.toString, true, toExpression(x.getOperand))
     case x: jp.PostfixExpression =>

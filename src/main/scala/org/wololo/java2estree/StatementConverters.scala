@@ -5,7 +5,6 @@ import org.wololo.estree._
 import Converters._
 import ExpressionConversions._
 import org.eclipse.jdt.core.{ dom => jp }
-import org.eclipse.jdt.core.dom.VariableDeclarationFragment
 
 object StatementConverters {
   def toStatement(s: jp.Statement)(implicit td: jp.TypeDeclaration): Statement = s match {
@@ -18,11 +17,14 @@ object StatementConverters {
           toStatement(x.getThenStatement),
           toStatement(x.getElseStatement))
     case x: jp.ForStatement =>
-      // TODO: implement
-      new BlockStatement(List())
+      val init = if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[jp.VariableDeclarationExpression])
+        new VariableDeclaration(x.initializers.get(0).asInstanceOf[jp.VariableDeclarationExpression].fragments map { x => variableDeclarator(x.asInstanceOf[jp.VariableDeclarationFragment]) })
+      else
+        new SequenceExpression(x.initializers map { x => toExpression(x.asInstanceOf[jp.Expression])})
+      val update = new SequenceExpression(x.updaters() map { x => toExpression(x.asInstanceOf[jp.Expression])})
+      new ForStatement(init, toExpression(x.getExpression), update, toStatement(x.getBody))
     case x: jp.WhileStatement =>
-      // TODO: implement
-      new BlockStatement(List())
+      new WhileStatement(toExpression(x.getExpression), toStatement(x.getBody))
     case x: jp.ConstructorInvocation =>
       new ExpressionStatement(
           new CallExpression(
@@ -32,7 +34,7 @@ object StatementConverters {
       ))
     case x: jp.Block => blockStatement(x)
     case x: jp.VariableDeclarationStatement =>
-      new VariableDeclaration(x.fragments map { x => variableDeclarator(x.asInstanceOf[VariableDeclarationFragment]) })
+      new VariableDeclaration(x.fragments map { x => variableDeclarator(x.asInstanceOf[jp.VariableDeclarationFragment]) })
     case x: jp.ExpressionStatement =>
       new ExpressionStatement(toExpression(x.getExpression))
     

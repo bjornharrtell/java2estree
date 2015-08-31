@@ -57,7 +57,9 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.BooleanLiteral =>
       new Literal(x.booleanValue, x.booleanValue.toString)
     case x: jp.NumberLiteral =>
-      new Literal(x.getToken, x.getToken)
+      val token = x.getToken
+      val cleanedToken = if (token.last == 'L') token.substring(0, token.length-1) else token
+      new Literal(cleanedToken, cleanedToken)
     case x: jp.CharacterLiteral =>
       new Literal(x.getEscapedValue, x.getEscapedValue)
     case x: jp.StringLiteral =>
@@ -65,8 +67,8 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.TypeLiteral =>
       new Literal(x.getType.toString, x.getType.toString)
     case x: jp.ArrayCreation =>
-      // TODO: implement
-      new Literal("null", "null")
+      val elements = x.getInitializer.expressions map { case x: jp.Expression => toExpression(x) }
+      new ArrayExpression(elements)
     case x: jp.ArrayAccess =>
       new MemberExpression(toExpression(x.getArray), toExpression(x.getIndex), true)
     case x: jp.PrefixExpression =>

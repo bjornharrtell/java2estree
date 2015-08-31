@@ -94,6 +94,10 @@ trait Expression extends Node
 
 class ThisExpression extends Expression
 
+class ArrayExpression(
+  val elements: Iterable[Expression]
+) extends Expression
+
 class FunctionExpression (
   params: Iterable[Pattern],
   body: BlockStatement,

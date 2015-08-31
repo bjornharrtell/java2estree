@@ -13,12 +13,10 @@ object StatementConverters {
     val statements = x.tail.takeWhile { !_.isInstanceOf[jp.SwitchCase] } map { x => toStatement(x) }
     val test = if (switchCase.getExpression == null) null else toExpression(switchCase.getExpression)
     val switchCases = accu :+ new SwitchCase(test, statements)
-    if (x.length - 1 - statements.length>0) {
+    if (x.length - 1 - statements.length>0)
       toSwitchCases(x.drop(statements.length + 1), switchCases)
-    } else {
+    else 
       switchCases
-    }
-    //switchCases
   }
   
   def toStatement(s: jp.Statement)(implicit td: jp.TypeDeclaration): Statement = s match {

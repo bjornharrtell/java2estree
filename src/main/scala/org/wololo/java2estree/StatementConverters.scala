@@ -20,7 +20,7 @@ object StatementConverters {
   }
   
   def toVariableDeclarators(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
-    fragments collect { case x: dom.VariableDeclarationFragment => variableDeclarator(x) }
+    fragments collect { case x: dom.VariableDeclarationFragment => toVariableDeclarator(x) }
   
   def toForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
     val init = if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression]) {
@@ -58,14 +58,14 @@ object StatementConverters {
     case x: dom.SuperConstructorInvocation =>
       val call = new CallExpression(new Super(), toExpressions(x.arguments))
       new ExpressionStatement(call)
-    case x: dom.Block => blockStatement(x)
+    case x: dom.Block => toBlockStatement(x)
     case x: dom.VariableDeclarationStatement =>
       new VariableDeclaration(toVariableDeclarators(x.fragments))
     case x: dom.ExpressionStatement =>
       new ExpressionStatement(toExpression(x.getExpression))
     case x: dom.TryStatement =>
       // TODO: catch switched on exception type
-      new TryStatement(blockStatement(x.getBody))
+      new TryStatement(toBlockStatement(x.getBody))
     case x: dom.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case null => null
     //case x => {

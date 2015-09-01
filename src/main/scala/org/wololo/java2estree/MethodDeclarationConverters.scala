@@ -8,25 +8,28 @@ import ExpressionConversions._
 import StatementConverters._
 
 object MethodDefinitionConverters {
-  def toArrowFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = new ArrowFunctionExpression(
-    x.parameters map { p => identifier(p.asInstanceOf[dom.SingleVariableDeclaration])} ,
-    blockStatement(x.getBody),
-    false
-  )
+  def toArrowFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = 
+    new ArrowFunctionExpression(
+      toIdentifiers(x.parameters),
+      toBlockStatement(x.getBody),
+      false
+    )
   
-  def toFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = new FunctionExpression(
-    x.parameters map { p => identifier(p.asInstanceOf[dom.SingleVariableDeclaration])} ,
-    blockStatement(x.getBody)
-  )
+  def toFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
+    new FunctionExpression(
+      toIdentifiers(x.parameters),
+      toBlockStatement(x.getBody)
+    )
   
-  def fromMethodDeclaration(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = new MethodDefinition(
-    identifier(x.getName),
-    new FunctionExpression(x.parameters map { p => identifier(p.asInstanceOf[dom.SingleVariableDeclaration])},
-        blockStatement(x.getBody)),
-    "method",
-    false,
-    dom.Modifier.isStatic(x.getModifiers)
-  )
+  def fromMethodDeclaration(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
+    new MethodDefinition(
+      new Identifier(x.getName.getIdentifier),
+      new FunctionExpression(toIdentifiers(x.parameters),
+          toBlockStatement(x.getBody)),
+      "method",
+      false,
+      dom.Modifier.isStatic(x.getModifiers)
+    )
  
   def fromMethodDeclarationOverloads(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
     
@@ -53,7 +56,7 @@ object MethodDefinitionConverters {
     }
     
     new MethodDefinition(
-      identifier(x.head.getName),
+      new Identifier(x.head.getName.getIdentifier),
       new FunctionExpression(
           List(new RestElement(new Identifier("args"))),
           parseAll(x)),
@@ -82,8 +85,8 @@ object MethodDefinitionConverters {
   
   def fromConstructorDeclaration(x: dom.MethodDeclaration, fieldInits: Iterable[Statement])(implicit td: dom.TypeDeclaration) = new MethodDefinition(
     new Identifier("init_"),
-    new FunctionExpression(x.parameters map { p => identifier(p.asInstanceOf[dom.SingleVariableDeclaration])  },
-        new BlockStatement(fieldInits ++ blockStatement(x.getBody).body)),
+    new FunctionExpression(toIdentifiers(x.parameters),
+        new BlockStatement(fieldInits ++ toBlockStatement(x.getBody).body)),
     "method",
     false,
     dom.Modifier.isStatic(x.getModifiers)

@@ -26,7 +26,7 @@ object Utils {
     parser.setUnitName("Test.java")
     parser.setSource(doc.get().toCharArray())
     val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
-    val program = Converters.program(cu)
+    val program = Converters.toProgram(cu)
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     val pb = new ProcessBuilder(List("./node_modules/astring/bin/astring", "--indent", "  ", "--startingIndentLevel", "2").asJava)

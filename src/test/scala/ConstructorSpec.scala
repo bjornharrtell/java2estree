@@ -18,7 +18,7 @@ class ConstructorSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    class Test {
+    export default class Test {
       constructor(...args) {
         this.init_(...args);
       }
@@ -41,7 +41,7 @@ class ConstructorSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    class Test {
+    export default class Test {
       constructor(...args) {
         this.init_(...args);
       }
@@ -57,6 +57,7 @@ class ConstructorSpec extends FlatSpec with Matchers {
     val java =
 """
     class Test {
+      int x;
       Test(int x) {
         this.x = x;
       }
@@ -65,11 +66,12 @@ class ConstructorSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    class Test {
+    export default class Test {
       constructor(...args) {
         this.init_(...args);
       }
       init_(x) {
+        this.x = null;
         this.x = x;
       }
     }

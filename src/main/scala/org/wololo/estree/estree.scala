@@ -6,7 +6,7 @@ trait Node {
 
 class Program (
   val sourceType: String,
-  val body: Iterable[Statement]
+  val body: Iterable[Node] // [ Statement | ModuleDeclaration ];
 ) extends Node
 
 class Function (
@@ -209,6 +209,51 @@ class CatchClause (
   val param: Pattern,
   val body: BlockStatement
 ) extends Node
+
+// Modules
+
+trait ModuleDeclaration extends Node
+
+class ModuleSpecifier (
+  val local: Identifier
+) extends Node
+
+class ImportDeclaration (
+  val specifiers: Iterable[Node], // [ ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier ]
+  val source: Literal
+) extends ModuleDeclaration
+
+class ImportSpecifier (
+  local: Identifier,
+  val imported: Identifier
+) extends ModuleSpecifier(local)
+
+class ImportDefaultSpecifier (
+  local: Identifier
+) extends ModuleSpecifier(local)
+
+class ImportNamespaceSpecifier (
+  local: Identifier
+) extends ModuleSpecifier(local)
+
+class ExportNamedDeclaration (
+  val declaration: Declaration = null,
+  val specifiers: Iterable[ ExportSpecifier ],
+  val source: Literal = null
+) extends ModuleDeclaration
+
+class ExportSpecifier (
+  local: Identifier,
+  val exported: Identifier
+) extends ModuleSpecifier(local)
+
+class ExportDefaultDeclaration (
+  val declaration: Node //Declaration | Expression;
+) extends ModuleDeclaration
+
+class ExportAllDeclaration (
+  source: Literal
+) extends ModuleDeclaration
 
 // Miscellaneous
 

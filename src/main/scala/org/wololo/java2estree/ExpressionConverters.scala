@@ -16,7 +16,10 @@ object ExpressionConversions extends LazyLogging {
       case b: dom.IVariableBinding if !b.isField() =>
         new Identifier(s.getFullyQualifiedName)
       case b: dom.IVariableBinding if !b.isParameter() =>
-        val member = if (dom.Modifier.isStatic(b.getModifiers)) new Identifier(b.getDeclaringClass.getName) else new ThisExpression()
+        val member = if (dom.Modifier.isStatic(b.getModifiers)) 
+          new Identifier(b.getDeclaringClass.getName)
+        else 
+          new ThisExpression()
         new MemberExpression(member, new Identifier(s.getFullyQualifiedName), false)
       case b: dom.ITypeBinding =>
         new Identifier(s.getFullyQualifiedName)

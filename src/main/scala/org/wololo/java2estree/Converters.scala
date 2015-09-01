@@ -2,7 +2,7 @@ package org.wololo.java2estree
 
 import org.wololo.estree._
 import scala.collection.JavaConversions._
-import org.eclipse.jdt.core.{ dom => jp }
+import org.eclipse.jdt.core.dom
 import ExpressionConversions._
 import StatementConverters._
 import MethodDefinitionConverters._
@@ -10,29 +10,35 @@ import com.typesafe.scalalogging.LazyLogging
 import org.eclipse.jdt.core.dom.Modifier
 
 object Converters extends LazyLogging {
-  def program(cu : jp.CompilationUnit) : Program = {
-    val sss = if (cu.types == null) List() else toStatements(cu.types.get(0).asInstanceOf[jp.TypeDeclaration])
-    new Program("module", sss)
+  def toProgram(cu : dom.CompilationUnit) : Program = {
+    val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toModuleDeclarations(x) };
+    val types = cu.types.toList collect { case x: dom.TypeDeclaration => toStatements(x) } flatten;
+    val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
+    new Program("module", imports ++ exportedTypes)
   }
     
-  /*def classExpression(td : jp.TypeDeclaration) = {
+  /*def classExpression(td : dom.TypeDeclaration) = {
     val (body, statics) = toClassBody(td)
     new ClassExpression(body)
   }*/
   
-  def identifier(p: jp.SingleVariableDeclaration): Identifier = identifier(p.getName)
+  def toIdentifier(x: dom.SingleVariableDeclaration): Identifier =
+    new Identifier(x.getName.getIdentifier)
   
-  def identifier(p: jp.SimpleName): Identifier = new Identifier(p.getIdentifier)
+  def toIdentifiers(parameters: java.util.List[_]) =
+    parameters collect { case x: dom.SingleVariableDeclaration => toIdentifier(x) }
   
-  def variableDeclarator(vd: jp.VariableDeclarationFragment)(implicit td: jp.TypeDeclaration) =
-    new VariableDeclarator(identifier(vd.getName), toExpression(vd.getInitializer))
+  //def toIdentifier(p: dom.SimpleName): Identifier = new Identifier(p.getIdentifier)
   
-  def blockStatement(bs: jp.Block)(implicit td: jp.TypeDeclaration) =
+  def toVariableDeclarator(vd: dom.VariableDeclarationFragment)(implicit td: dom.TypeDeclaration) =
+    new VariableDeclarator(new Identifier(vd.getName.getIdentifier), toExpression(vd.getInitializer))
+  
+  def toBlockStatement(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement =
     if (bs == null)
       new BlockStatement(List())
     else
       new BlockStatement(
-        bs.statements collect { case statement: jp.Statement => toStatement(statement)})
+        bs.statements collect { case statement: dom.Statement => toStatement(statement)})
   
   def createConstructor = {
     new MethodDefinition(
@@ -51,10 +57,15 @@ object Converters extends LazyLogging {
     )
   }
   
-  /**
-   * @return A tuple with a ClassBody and any static statements that found in the BodyDeclaration
-   */
-  def toStatements(implicit td: jp.TypeDeclaration): Iterable[Statement] = {
+  def toModuleDeclarations(implicit id: dom.ImportDeclaration): Node = {
+    val orgname = id.getName.getFullyQualifiedName
+    val path = "./" + orgname.replace('.', '/')
+    val name = orgname.split('.').last
+    val s = List(new ImportDefaultSpecifier(new Identifier(name)))
+    new ImportDeclaration(s, new Literal(s"'${path}'", s"'${path}'"))
+  }
+  
+  def toStatements(implicit td: dom.TypeDeclaration): Iterable[Node] = {
     
     val fields = td.getFields
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) }
@@ -97,7 +108,7 @@ object Converters extends LazyLogging {
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
     val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => 
       val statements = toStatements(x).toList
-      val c = statements.head.asInstanceOf[ClassDeclaration]
+      //val c = statements.head.asInstanceOf[ClassDeclaration]
       val a = new AssignmentExpression("=", new MemberExpression(new Identifier(td.getName.getIdentifier), new Identifier(x.getName.getIdentifier), false), new Identifier(x.getName.getIdentifier))
       statements :+ new ExpressionStatement(a)
     } flatten

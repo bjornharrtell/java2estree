@@ -127,7 +127,7 @@ object MethodDefinitionConverters {
     )
   }
   
-  def fromClassOrInterfaceDeclarationMember(x: jp.TypeDeclaration)(implicit td: jp.TypeDeclaration) : ExpressionStatement = 
+  /*def fromClassOrInterfaceDeclarationMember(x: jp.TypeDeclaration)(implicit td: jp.TypeDeclaration) : ExpressionStatement = 
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
         new ThisExpression(),
         new Identifier(x.getName.getIdentifier), false),
@@ -137,5 +137,5 @@ object MethodDefinitionConverters {
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
         new Identifier(td.getName.getIdentifier),
         new Identifier(x.getName.getIdentifier), false),
-        classExpression(x)))
+        classExpression(x)))*/
 }

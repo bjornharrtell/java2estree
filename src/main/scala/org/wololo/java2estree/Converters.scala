@@ -11,20 +11,14 @@ import org.eclipse.jdt.core.dom.Modifier
 
 object Converters extends LazyLogging {
   def program(cu : jp.CompilationUnit) : Program = {
-    val sss = if (cu.types == null) List() else classDeclaration(cu.types.get(0).asInstanceOf[jp.TypeDeclaration])
+    val sss = if (cu.types == null) List() else toStatements(cu.types.get(0).asInstanceOf[jp.TypeDeclaration])
     new Program("module", sss)
   }
-  
-  def classDeclaration(td: jp.TypeDeclaration): Iterable[Statement] = {
-    val (body, statics) = toClassBody(td)
-    val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body)
-    List(declaration) ++ statics
-  }
     
-  def classExpression(td : jp.TypeDeclaration) = {
+  /*def classExpression(td : jp.TypeDeclaration) = {
     val (body, statics) = toClassBody(td)
     new ClassExpression(body)
-  }
+  }*/
   
   def identifier(p: jp.SingleVariableDeclaration): Identifier = identifier(p.getName)
   
@@ -60,7 +54,7 @@ object Converters extends LazyLogging {
   /**
    * @return A tuple with a ClassBody and any static statements that found in the BodyDeclaration
    */
-  def toClassBody(implicit td: jp.TypeDeclaration): (ClassBody, Iterable[Statement]) = {
+  def toStatements(implicit td: jp.TypeDeclaration): Iterable[Statement] = {
     
     val fields = td.getFields
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) }
@@ -100,12 +94,17 @@ object Converters extends LazyLogging {
     } flatten
     
     // TODO: Member inner classes should probably defined as getters
-    val memberInnerCasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
-    val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationStatic(_) }
-        
-    (
-        new ClassBody(List(constructor, initMethod) ++ memberMethods ++ staticMethods),// ++ classes),
-        staticFields ++ staticInnerClasses
-    )
+    //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
+    val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => 
+      val statements = toStatements(x).toList
+      val c = statements.head.asInstanceOf[ClassDeclaration]
+      val a = new AssignmentExpression("=", new MemberExpression(new Identifier(td.getName.getIdentifier), new Identifier(x.getName.getIdentifier), false), new Identifier(x.getName.getIdentifier))
+      statements :+ new ExpressionStatement(a)
+    } flatten
+    
+    val body = new ClassBody(List(constructor, initMethod) ++ memberMethods ++ staticMethods)
+    val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body)
+    
+    List(declaration) ++ staticFields ++ staticInnerClasses
   }
 }

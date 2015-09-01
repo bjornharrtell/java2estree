@@ -5,12 +5,12 @@ import scala.collection.mutable.Buffer
 import org.wololo.estree._
 import Converters._
 import ExpressionConversions._
-import org.eclipse.jdt.core.{ dom => jp }
+import org.eclipse.jdt.core.dom
 
 object StatementConverters {
-  def toSwitchCases(x: Buffer[jp.Statement], accu: List[SwitchCase] = List())(implicit td: jp.TypeDeclaration) : List[SwitchCase] = {
-    val switchCase = x.head.asInstanceOf[jp.SwitchCase]
-    val statements = x.tail.takeWhile { !_.isInstanceOf[jp.SwitchCase] } map { x => toStatement(x) }
+  def toSwitchCases(x: Buffer[dom.Statement], accu: List[SwitchCase] = List())(implicit td: dom.TypeDeclaration) : List[SwitchCase] = {
+    val switchCase = x.head.asInstanceOf[dom.SwitchCase]
+    val statements = x.tail.takeWhile { !_.isInstanceOf[dom.SwitchCase] } map { x => toStatement(x) }
     val test = if (switchCase.getExpression == null) null else toExpression(switchCase.getExpression)
     val switchCases = accu :+ new SwitchCase(test, statements)
     if (x.length - 1 - statements.length>0)
@@ -19,52 +19,57 @@ object StatementConverters {
       switchCases
   }
   
-  def toStatement(s: jp.Statement)(implicit td: jp.TypeDeclaration): Statement = s match {
-    case x: jp.EmptyStatement =>
+  def toVariableDeclarators(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
+    fragments collect { case x: dom.VariableDeclarationFragment => variableDeclarator(x) }
+  
+  def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
+    expressions collect { case x: dom.Expression => toExpression(x)}
+  
+  def toForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
+    val init = if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression]) {
+      val vde = x.initializers.get(0).asInstanceOf[dom.VariableDeclarationExpression]
+      new VariableDeclaration(toVariableDeclarators(vde.fragments))
+    } 
+    else
+      new SequenceExpression(toExpressions(x.initializers))
+    val update = new SequenceExpression(toExpressions(x.updaters))
+    new ForStatement(init, toExpression(x.getExpression), update, toStatement(x.getBody))
+  }
+  
+  def toStatement(s: dom.Statement)(implicit td: dom.TypeDeclaration): Statement = s match {
+    case x: dom.EmptyStatement =>
       new EmptyStatement()  
-    case x: jp.ReturnStatement =>
+    case x: dom.ReturnStatement =>
       new ReturnStatement(toExpression(x.getExpression))
-    case x: jp.IfStatement =>
+    case x: dom.IfStatement =>
       new IfStatement(toExpression(x.getExpression),
           toStatement(x.getThenStatement),
           toStatement(x.getElseStatement))
-    case x: jp.SwitchStatement =>
-      val cases = toSwitchCases(x.statements collect { case x: jp.Statement => x })
+    case x: dom.SwitchStatement =>
+      val cases = toSwitchCases(x.statements collect { case x: dom.Statement => x })
       new SwitchStatement(toExpression(x.getExpression), cases)
-    case x: jp.BreakStatement =>
+    case x: dom.BreakStatement =>
       new BreakStatement()
-    case x: jp.ForStatement =>
-      val init = if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[jp.VariableDeclarationExpression])
-        new VariableDeclaration(x.initializers.get(0).asInstanceOf[jp.VariableDeclarationExpression].fragments map { x => variableDeclarator(x.asInstanceOf[jp.VariableDeclarationFragment]) })
-      else
-        new SequenceExpression(x.initializers map { x => toExpression(x.asInstanceOf[jp.Expression])})
-      val update = new SequenceExpression(x.updaters() map { x => toExpression(x.asInstanceOf[jp.Expression])})
-      new ForStatement(init, toExpression(x.getExpression), update, toStatement(x.getBody))
-    case x: jp.WhileStatement =>
+    case x: dom.ForStatement =>
+      toForStatement(x)
+    case x: dom.WhileStatement =>
       new WhileStatement(toExpression(x.getExpression), toStatement(x.getBody))
-    case x: jp.ConstructorInvocation =>
-      new ExpressionStatement(
-          new CallExpression(
-              new MemberExpression(
-                  new ThisExpression(), new Identifier("init_"), false),
-                  x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
-      ))
-    case x: jp.SuperConstructorInvocation =>
-      val call = new CallExpression(
-          new Super(),
-          x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
-      )
+    case x: dom.ConstructorInvocation =>
+      val member = new MemberExpression(new ThisExpression(), new Identifier("init_"), false)
+      val call = new CallExpression(member, toExpressions(x.arguments))
       new ExpressionStatement(call)
-    case x: jp.Block => blockStatement(x)
-    case x: jp.VariableDeclarationStatement =>
-      new VariableDeclaration(x.fragments map { x => variableDeclarator(x.asInstanceOf[jp.VariableDeclarationFragment]) })
-    case x: jp.ExpressionStatement =>
+    case x: dom.SuperConstructorInvocation =>
+      val call = new CallExpression(new Super(), toExpressions(x.arguments))
+      new ExpressionStatement(call)
+    case x: dom.Block => blockStatement(x)
+    case x: dom.VariableDeclarationStatement =>
+      new VariableDeclaration(toVariableDeclarators(x.fragments))
+    case x: dom.ExpressionStatement =>
       new ExpressionStatement(toExpression(x.getExpression))
-    
-    case x: jp.TryStatement =>
+    case x: dom.TryStatement =>
       // TODO: catch switched on exception type
       new TryStatement(blockStatement(x.getBody))
-    case x: jp.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
+    case x: dom.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case null => null
     //case x => {
       //logger.debug(s"Unexpected statement (${if (x==null) x else x.toString()})")
@@ -72,10 +77,10 @@ object StatementConverters {
     //}
   }
   /*
-  def statement(es: jp.ExpressionStatement): Statement =
+  def statement(es: dom.ExpressionStatement): Statement =
     es.getExpression match {
-    case x: jp.expr.VariableDeclarationExpr =>
+    case x: dom.expr.VariableDeclarationExpr =>
       new VariableDeclaration(x.getVars map variableDeclarator, "let")
-    case x: jp.expr.Expression => new ExpressionStatement(x)
+    case x: dom.expr.Expression => new ExpressionStatement(x)
   }*/
 }

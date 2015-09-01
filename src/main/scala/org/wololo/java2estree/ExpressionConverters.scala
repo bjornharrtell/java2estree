@@ -51,6 +51,9 @@ object ExpressionConversions extends LazyLogging {
     else
       new BinaryExpression(op, l.head, l.get(1))
   
+  def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
+    expressions collect { case x: dom.Expression => toExpression(x)}
+  
   def toExpression(e: dom.Expression)(implicit td: dom.TypeDeclaration): Expression = e match {
     case nl: dom.NullLiteral => new Literal("null", "null")
     case x: dom.SimpleName => resolveSimpleName(x)
@@ -72,7 +75,7 @@ object ExpressionConversions extends LazyLogging {
     case x: dom.TypeLiteral =>
       new Literal(x.getType.toString, x.getType.toString)
     case x: dom.ArrayCreation =>
-      val elements = if (x.getInitializer == null) List() else x.getInitializer.expressions map { case x: dom.Expression => toExpression(x) }
+      val elements = if (x.getInitializer == null) List() else toExpressions(x.getInitializer.expressions)
       new ArrayExpression(elements)
     case x: dom.ArrayAccess =>
       new MemberExpression(toExpression(x.getArray), toExpression(x.getIndex), true)
@@ -81,48 +84,45 @@ object ExpressionConversions extends LazyLogging {
     case x: dom.PostfixExpression =>
       new UnaryExpression(x.getOperator.toString, false, toExpression(x.getOperand))
     case x: dom.ConditionalExpression =>
-      new ConditionalExpression(toExpression(x.getExpression), toExpression(x.getElseExpression), toExpression(x.getThenExpression))
+      val test = toExpression(x.getExpression)
+      val alternate = toExpression(x.getElseExpression)
+      val consequent = toExpression(x.getThenExpression)
+      new ConditionalExpression(test, alternate, consequent)
     case x: dom.InfixExpression =>
       val ops = Buffer(toExpression(x.getLeftOperand), toExpression(x.getRightOperand))
-      val exops = ops ++ (x.extendedOperands map { a => toExpression(a.asInstanceOf[dom.Expression]) })
+      val exops = ops ++ toExpressions(x.extendedOperands)
       toBinaryExpression(translateOp(x.getOperator.toString), exops)
     case x: dom.InstanceofExpression =>
-      new BinaryExpression("instanceof", toExpression(x.getLeftOperand),
-          new Literal(x.getRightOperand.toString, x.getRightOperand.toString))
+      val t = x.getRightOperand.resolveBinding.getName
+      new BinaryExpression("instanceof", toExpression(x.getLeftOperand), new Literal(t, t))
     case x: dom.CastExpression => 
       // TODO: special case handle cast double/float -> int
       toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
       new NewExpression(
-          new Identifier(x.getType.toString), x.arguments map { x => toExpression(x.asInstanceOf[dom.Expression]) })
+          new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
       if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess")
-      new MemberExpression(
-          if (dom.Modifier.isStatic(x.resolveFieldBinding.getModifiers))
-            new Identifier(td.getName.getIdentifier)
-          else
-            new ThisExpression(),
-          new Identifier(x.getName.getIdentifier), false)
+      val t = if (dom.Modifier.isStatic(x.resolveFieldBinding.getModifiers))
+        new Identifier(td.getName.getIdentifier)
+      else
+        new ThisExpression()
+      new MemberExpression(t, new Identifier(x.getName.getIdentifier), false)
     case x: dom.MethodInvocation =>
       if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding of MethodInvocation")
-      new CallExpression(new MemberExpression(
-          if (x.getExpression == null && !dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers)) 
-            new ThisExpression()
-          else if (x.getExpression == null && dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers))
-            new Identifier(td.getName.getIdentifier)
-          else
-            toExpression(x.getExpression),
-          new Identifier(x.getName.getIdentifier), false),
-          x.arguments map { x => toExpression(x.asInstanceOf[dom.Expression]) }
-      )
+      val t = if (x.getExpression == null && !dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers)) 
+        new ThisExpression()
+      else if (x.getExpression == null && dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers))
+        new Identifier(td.getName.getIdentifier)
+      else
+        toExpression(x.getExpression)
+      val callee = new MemberExpression(t, new Identifier(x.getName.getIdentifier), false)
+      new CallExpression(callee, toExpressions(x.arguments))
     case x: dom.SuperFieldAccess =>
       new Literal("super", "super")
     case x: dom.SuperMethodInvocation =>
-      new CallExpression(new MemberExpression(
-          new Identifier("super"),
-          new Identifier(x.getName.getIdentifier), false),
-          x.arguments map { x => toExpression(x.asInstanceOf[dom.Expression]) }
-      )
+      val callee = new MemberExpression(new Super(), new Identifier(x.getName.getIdentifier), false)
+      new CallExpression(callee, toExpressions(x.arguments))
     case null =>
       new Literal(null, "null")
     /*case x => {

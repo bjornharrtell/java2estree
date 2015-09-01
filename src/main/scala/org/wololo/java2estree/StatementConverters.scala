@@ -22,9 +22,6 @@ object StatementConverters {
   def toVariableDeclarators(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     fragments collect { case x: dom.VariableDeclarationFragment => variableDeclarator(x) }
   
-  def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
-    expressions collect { case x: dom.Expression => toExpression(x)}
-  
   def toForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
     val init = if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression]) {
       val vde = x.initializers.get(0).asInstanceOf[dom.VariableDeclarationExpression]
@@ -55,8 +52,8 @@ object StatementConverters {
     case x: dom.WhileStatement =>
       new WhileStatement(toExpression(x.getExpression), toStatement(x.getBody))
     case x: dom.ConstructorInvocation =>
-      val member = new MemberExpression(new ThisExpression(), new Identifier("init_"), false)
-      val call = new CallExpression(member, toExpressions(x.arguments))
+      val callee = new MemberExpression(new ThisExpression(), new Identifier("init_"), false)
+      val call = new CallExpression(callee, toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.SuperConstructorInvocation =>
       val call = new CallExpression(new Super(), toExpressions(x.arguments))
@@ -76,11 +73,4 @@ object StatementConverters {
       //new BlockStatement(List())
     //}
   }
-  /*
-  def statement(es: dom.ExpressionStatement): Statement =
-    es.getExpression match {
-    case x: dom.expr.VariableDeclarationExpr =>
-      new VariableDeclaration(x.getVars map variableDeclarator, "let")
-    case x: dom.expr.Expression => new ExpressionStatement(x)
-  }*/
 }

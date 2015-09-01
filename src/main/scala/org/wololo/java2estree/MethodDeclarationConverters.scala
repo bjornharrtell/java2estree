@@ -36,8 +36,7 @@ object MethodDefinitionConverters {
         new ReturnStatement(new CallExpression(
           toArrowFunctionExpression(declarations.head),
           List(new SpreadElement(new Identifier("args")))
-        ))//,
-        //new ExpressionStatement(new Identifier("break"))
+        ))
       )
     }
     

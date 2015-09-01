@@ -11,6 +11,7 @@ import org.eclipse.jdt.core.dom.Modifier
 object ExpressionConversions extends LazyLogging {
   def resolveSimpleName(s: jp.SimpleName) = { 
     //println(s)
+    if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName")
     s.resolveBinding match { 
       case b: jp.IVariableBinding if b.isParameter() =>
         new Identifier(s.getFullyQualifiedName)
@@ -24,7 +25,7 @@ object ExpressionConversions extends LazyLogging {
   }
   def resolveQualifiedName(q: jp.QualifiedName) = {
     //println(q)
-    if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding")
+    if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName")
     q.getQualifier.resolveBinding match { 
       case b: jp.IVariableBinding =>
         new Identifier(q.getFullyQualifiedName)
@@ -85,7 +86,9 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.InstanceofExpression =>
       new BinaryExpression("instanceof", toExpression(x.getLeftOperand),
           new Literal(x.getRightOperand.toString, x.getRightOperand.toString))
-    case x: jp.CastExpression => toExpression(x.getExpression)
+    case x: jp.CastExpression => 
+      // TODO: special case handle cast double/float -> int
+      toExpression(x.getExpression)
     case x: jp.ClassInstanceCreation =>
       new NewExpression(
           new Identifier(x.getType.toString), x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) })
@@ -94,14 +97,14 @@ object ExpressionConversions extends LazyLogging {
           new ThisExpression(),
           new Identifier(x.getName.getIdentifier), false)
     case x: jp.MethodInvocation =>
-      if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding")
+      if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding of MethodInvocation")
       new CallExpression(new MemberExpression(
-          /*if (td.resolveBinding.getKey == x.resolveMethodBinding.getDeclaringClass.getKey &&
-              !Modifier.isStatic(x.resolveMethodBinding.getModifiers))
-            new ThisExpression
-          else 
-            new Identifier(x.resolveMethodBinding.getDeclaringClass.getName),*/
-          if (x.getExpression == null) new ThisExpression() else toExpression(x.getExpression),
+          if (x.getExpression == null && !Modifier.isStatic(x.resolveMethodBinding.getModifiers)) 
+            new ThisExpression()
+          else if (x.getExpression == null && Modifier.isStatic(x.resolveMethodBinding.getModifiers))
+            new Identifier(td.getName.getIdentifier)
+          else
+            toExpression(x.getExpression),
           new Identifier(x.getName.getIdentifier), false),
           x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
       )

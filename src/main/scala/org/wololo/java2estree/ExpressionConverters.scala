@@ -16,9 +16,10 @@ object ExpressionConversions extends LazyLogging {
       case b: jp.IVariableBinding if b.isParameter() =>
         new Identifier(s.getFullyQualifiedName)
       case b: jp.IVariableBinding if !b.isField() =>
-         new Identifier(s.getFullyQualifiedName)
+        new Identifier(s.getFullyQualifiedName)
       case b: jp.IVariableBinding if !b.isParameter() =>
-        new MemberExpression(new Identifier("this"), new Identifier(s.getFullyQualifiedName), false)
+        val member = if (Modifier.isStatic(b.getModifiers)) new Identifier(b.getDeclaringClass.getName) else new ThisExpression()
+        new MemberExpression(member, new Identifier(s.getFullyQualifiedName), false)
       case b: jp.ITypeBinding =>
         new Identifier(s.getFullyQualifiedName)
     }
@@ -93,8 +94,12 @@ object ExpressionConversions extends LazyLogging {
       new NewExpression(
           new Identifier(x.getType.toString), x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) })
     case x: jp.FieldAccess =>
+      if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess")
       new MemberExpression(
-          new ThisExpression(),
+          if (Modifier.isStatic(x.resolveFieldBinding.getModifiers))
+            new Identifier(td.getName.getIdentifier)
+          else
+            new ThisExpression(),
           new Identifier(x.getName.getIdentifier), false)
     case x: jp.MethodInvocation =>
       if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding of MethodInvocation")

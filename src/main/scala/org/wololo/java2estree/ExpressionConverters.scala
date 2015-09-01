@@ -24,6 +24,7 @@ object ExpressionConversions extends LazyLogging {
         new Identifier(s.getFullyQualifiedName)
     }
   }
+  
   def resolveQualifiedName(q: jp.QualifiedName) = {
     //println(q)
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName")
@@ -35,12 +36,17 @@ object ExpressionConversions extends LazyLogging {
     }
   }
   
-  def toOp(op: String) = op match {
+  def translateOp(op: String) = op match {
     case "==" => "===" 
     case "!=" => "!=="
     case x => x
   }
   
+  def translateToken(token: String) =
+    if (token.last == 'L')
+      token.substring(0, token.length-1)
+    else token
+    
   def toBinaryExpression(op: String, l: Buffer[Expression]) : BinaryExpression =
     if (l.length > 2) 
       new BinaryExpression(op, l.head, toBinaryExpression(op, l.tail))
@@ -59,9 +65,8 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.BooleanLiteral =>
       new Literal(x.booleanValue, x.booleanValue.toString)
     case x: jp.NumberLiteral =>
-      val token = x.getToken
-      val cleanedToken = if (token.last == 'L') token.substring(0, token.length-1) else token
-      new Literal(cleanedToken, cleanedToken)
+      val token = translateToken(x.getToken)
+      new Literal(token, token)
     case x: jp.CharacterLiteral =>
       new Literal(x.getEscapedValue, x.getEscapedValue)
     case x: jp.StringLiteral =>
@@ -69,7 +74,6 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.TypeLiteral =>
       new Literal(x.getType.toString, x.getType.toString)
     case x: jp.ArrayCreation =>
-      //println(x.getInitializer)
       val elements = if (x.getInitializer == null) List() else x.getInitializer.expressions map { case x: jp.Expression => toExpression(x) }
       new ArrayExpression(elements)
     case x: jp.ArrayAccess =>
@@ -83,7 +87,7 @@ object ExpressionConversions extends LazyLogging {
     case x: jp.InfixExpression =>
       val ops = Buffer(toExpression(x.getLeftOperand), toExpression(x.getRightOperand))
       val exops = ops ++ (x.extendedOperands map { a => toExpression(a.asInstanceOf[jp.Expression]) })
-      toBinaryExpression(toOp(x.getOperator.toString), exops)
+      toBinaryExpression(translateOp(x.getOperator.toString), exops)
     case x: jp.InstanceofExpression =>
       new BinaryExpression("instanceof", toExpression(x.getLeftOperand),
           new Literal(x.getRightOperand.toString, x.getRightOperand.toString))
@@ -122,7 +126,7 @@ object ExpressionConversions extends LazyLogging {
           x.arguments map { x => toExpression(x.asInstanceOf[jp.Expression]) }
       )
     case null =>
-      new Literal("null", "null")
+      new Literal(null, "null")
     /*case x => {
       logger.debug(s"Unexpected expression ($x})")
       new Literal("null", "null")

@@ -45,6 +45,8 @@ object StatementConverters {
     case x: dom.SwitchStatement =>
       val cases = toSwitchCases(x.statements collect { case x: dom.Statement => x })
       new SwitchStatement(toExpression(x.getExpression), cases)
+    case x: dom.ContinueStatement =>
+      new ContinueStatement()
     case x: dom.BreakStatement =>
       new BreakStatement()
     case x: dom.ForStatement =>

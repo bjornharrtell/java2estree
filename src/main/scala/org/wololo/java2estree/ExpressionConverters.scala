@@ -34,6 +34,8 @@ object ExpressionConversions extends LazyLogging {
         new Identifier(q.getFullyQualifiedName)
       case b: dom.ITypeBinding =>
         new Identifier(q.getFullyQualifiedName)
+      case b: dom.IPackageBinding =>
+        new Identifier(q.getFullyQualifiedName)
     }
   }
   

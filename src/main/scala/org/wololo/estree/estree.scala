@@ -63,6 +63,11 @@ class WhileStatement (
   val body: Statement
 ) extends Statement
 
+class DoWhileStatement (
+  val body: Statement,
+  val test: Expression
+) extends Statement
+
 class ForStatement (
   val init: Node,
   val test: Expression,

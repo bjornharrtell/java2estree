@@ -82,6 +82,9 @@ object ExpressionConversions extends LazyLogging {
     case x: dom.ArrayCreation =>
       val elements = if (x.getInitializer == null) List() else toExpressions(x.getInitializer.expressions)
       new ArrayExpression(elements)
+    case x: dom.ArrayInitializer =>
+      val elements = toExpressions(x.expressions)
+      new ArrayExpression(elements)
     case x: dom.ArrayAccess =>
       new MemberExpression(toExpression(x.getArray), toExpression(x.getIndex), true)
     case x: dom.PrefixExpression =>

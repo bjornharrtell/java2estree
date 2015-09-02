@@ -53,6 +53,8 @@ object StatementConverters {
       toForStatement(x)
     case x: dom.WhileStatement =>
       new WhileStatement(toExpression(x.getExpression), toStatement(x.getBody))
+    case x: dom.DoStatement =>
+      new DoWhileStatement(toStatement(x.getBody), toExpression(x.getExpression))
     case x: dom.ConstructorInvocation =>
       val callee = new MemberExpression(new ThisExpression(), new Identifier("init_"), false)
       val call = new CallExpression(callee, toExpressions(x.arguments))

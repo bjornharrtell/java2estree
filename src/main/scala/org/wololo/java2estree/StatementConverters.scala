@@ -18,6 +18,14 @@ object StatementConverters {
     else 
       switchCases
   }
+    
+  def convertCatchClauses(clauses: Iterable[dom.CatchClause])(implicit td: dom.TypeDeclaration) : IfStatement = {
+    if (clauses.size > 0) {
+      val test = toInstanceOf(new Identifier("e"), clauses.head.getException.getType.resolveBinding().getName)
+      val consequent = toBlockStatement(clauses.head.getBody)
+      new IfStatement(test, consequent, convertCatchClauses(clauses.tail))
+    } else null
+  } 
   
   def toVariableDeclarators(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     fragments collect { case x: dom.VariableDeclarationFragment => toVariableDeclarator(x) }
@@ -68,8 +76,11 @@ object StatementConverters {
     case x: dom.ExpressionStatement =>
       new ExpressionStatement(toExpression(x.getExpression))
     case x: dom.TryStatement =>
-      // TODO: catch switched on exception type
-      new TryStatement(toBlockStatement(x.getBody))
+      val block = toBlockStatement(x.getBody)
+      val cases = new BlockStatement(List(convertCatchClauses(x.catchClauses collect { case x: dom.CatchClause => x})))
+      val handler = new CatchClause(new Identifier("e"), cases)
+      val finalizer = toBlockStatement(x.getFinally)
+      new TryStatement(block, handler, finalizer)
     case x: dom.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case null => null
     //case x => {

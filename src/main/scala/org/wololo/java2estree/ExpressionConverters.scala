@@ -56,6 +56,9 @@ object ExpressionConversions extends LazyLogging {
     else
       new BinaryExpression(op, l.head, l.get(1))
   
+  def toInstanceOf(e: Expression, typeName: String) =
+    new BinaryExpression("instanceof", e, new Literal(typeName, typeName))
+  
   def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     expressions collect { case x: dom.Expression => toExpression(x)}
   
@@ -101,8 +104,7 @@ object ExpressionConversions extends LazyLogging {
       val exops = ops ++ toExpressions(x.extendedOperands)
       toBinaryExpression(translateOp(x.getOperator.toString), exops)
     case x: dom.InstanceofExpression =>
-      val t = x.getRightOperand.resolveBinding.getName
-      new BinaryExpression("instanceof", toExpression(x.getLeftOperand), new Literal(t, t))
+      toInstanceOf(toExpression(x.getLeftOperand), x.getRightOperand.resolveBinding.getName)
     case x: dom.CastExpression => 
       // TODO: special case handle cast double/float -> int
       toExpression(x.getExpression)

@@ -119,9 +119,9 @@ object MethodDefinitionConverters {
     
     new MethodDefinition(new Identifier("init_"),
       new FunctionExpression(
-          List(new RestElement(new Identifier("args"))),
-          new BlockStatement(fieldInits ++ parseAll(x).body)
-          ),
+        List(new RestElement(new Identifier("args"))),
+        new BlockStatement(fieldInits ++ parseAll(x).body)
+      ),
       "method",
       false,
       dom.Modifier.isStatic(x.head.getModifiers)

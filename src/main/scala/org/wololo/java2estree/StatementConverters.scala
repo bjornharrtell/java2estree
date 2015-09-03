@@ -25,7 +25,7 @@ object StatementConverters {
       val consequent = toBlockStatement(clauses.head.getBody)
       new IfStatement(test, consequent, convertCatchClauses(clauses.tail))
     } else null
-  } 
+  }
   
   def toVariableDeclarators(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     fragments collect { case x: dom.VariableDeclarationFragment => toVariableDeclarator(x) }

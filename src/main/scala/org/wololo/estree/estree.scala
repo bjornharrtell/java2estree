@@ -75,6 +75,11 @@ class ForStatement (
   val body: Statement
 ) extends Statement
 
+class ForInStatement (
+  val left: Node,
+  val right: Expression,
+  val body: Statement
+) extends Statement
 
 // Declarations
 

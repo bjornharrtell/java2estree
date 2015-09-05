@@ -59,6 +59,11 @@ object StatementConverters {
       new BreakStatement()
     case x: dom.ForStatement =>
       toForStatement(x)
+    case x: dom.EnhancedForStatement =>
+      val left = toExpression(x.getParameter.getInitializer)
+      val right = toExpression(x.getExpression) 
+      val body = toStatement(x.getBody)
+      new ForInStatement(left, right, body)
     case x: dom.WhileStatement =>
       new WhileStatement(toExpression(x.getExpression), toStatement(x.getBody))
     case x: dom.DoStatement =>
@@ -84,6 +89,8 @@ object StatementConverters {
     case x: dom.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case x: dom.SynchronizedStatement =>
       toBlockStatement(x.getBody)
+    case x: dom.LabeledStatement =>
+      new EmptyStatement()
     case null => null
     //case x => {
       //logger.debug(s"Unexpected statement (${if (x==null) x else x.toString()})")

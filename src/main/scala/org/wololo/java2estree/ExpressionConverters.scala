@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 object ExpressionConversions extends LazyLogging {
   def resolveSimpleName(s: dom.SimpleName) = { 
     //println(s)
-    if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName")
+    if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
     s.resolveBinding match { 
       case b: dom.IVariableBinding if b.isParameter() =>
         new Identifier(s.getFullyQualifiedName)
@@ -28,7 +28,7 @@ object ExpressionConversions extends LazyLogging {
   
   def resolveQualifiedName(q: dom.QualifiedName) = {
     //println(q)
-    if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName")
+    if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
     q.getQualifier.resolveBinding match { 
       case b: dom.IVariableBinding =>
         new Identifier(q.getFullyQualifiedName)
@@ -112,14 +112,16 @@ object ExpressionConversions extends LazyLogging {
       new NewExpression(
           new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
-      if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess")
+      if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess when parsing " + x + " with parent " + x.getParent)
       val t = if (dom.Modifier.isStatic(x.resolveFieldBinding.getModifiers))
         new Identifier(td.getName.getIdentifier)
       else
         new ThisExpression()
       new MemberExpression(t, new Identifier(x.getName.getIdentifier), false)
     case x: dom.MethodInvocation =>
-      if (x.resolveMethodBinding == null) throw new RuntimeException("Cannot resolve binding of MethodInvocation")
+      if (x.resolveMethodBinding == null) {
+        throw new RuntimeException("Cannot resolve binding of MethodInvocation when parsing " + x + " with parent " + x.getParent)
+      }
       val t = if (x.getExpression == null && !dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers)) 
         new ThisExpression()
       else if (x.getExpression == null && dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers))

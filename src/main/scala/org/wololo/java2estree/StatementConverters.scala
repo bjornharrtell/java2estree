@@ -82,6 +82,8 @@ object StatementConverters {
       val finalizer = toBlockStatement(x.getFinally)
       new TryStatement(block, handler, finalizer)
     case x: dom.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
+    case x: dom.SynchronizedStatement =>
+      toBlockStatement(x.getBody)
     case null => null
     //case x => {
       //logger.debug(s"Unexpected statement (${if (x==null) x else x.toString()})")

@@ -172,8 +172,9 @@ class ArrowFunctionExpression(
 class Super extends Node
 
 class ClassExpression(
-  body: ClassBody
-) extends Class(body) with Expression
+  body: ClassBody,
+  superClass: Expression
+) extends Class(body, superClass) with Expression
 
 class SpreadElement (
   val argument: Expression
@@ -192,7 +193,8 @@ class RestElement (
 // Classes
 
 class Class (
-  val body: ClassBody
+  val body: ClassBody,
+  val superClass: Expression
 ) extends Node
 
 class ClassBody(
@@ -209,8 +211,9 @@ class MethodDefinition (
 
 class ClassDeclaration (
   val id: Identifier,
-  val body: ClassBody
-) extends Statement
+  body: ClassBody,
+  superClass: Expression
+) extends Class(body, superClass) with Declaration
 
 // Clauses
 

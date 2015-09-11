@@ -59,7 +59,7 @@ object Converters extends LazyLogging {
   
   def toModuleDeclarations(implicit id: dom.ImportDeclaration): Node = {
     val orgname = id.getName.getFullyQualifiedName
-    val path = "./" + orgname.replace('.', '/')
+    val path = orgname.replace('.', '/')
     val name = orgname.split('.').last
     val s = List(new ImportDefaultSpecifier(new Identifier(name)))
     new ImportDeclaration(s, new Literal(s"'${path}'", s"'${path}'"))
@@ -114,7 +114,9 @@ object Converters extends LazyLogging {
     } flatten
     
     val body = new ClassBody(List(constructor, initMethod) ++ memberMethods ++ staticMethods)
-    val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body)
+    
+    val superClass = if (td.getSuperclass != null) new Identifier(td.getSuperclass.getFullyQualifiedName) else null
+    val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass)
     
     List(declaration) ++ staticFields ++ staticInnerClasses
   }

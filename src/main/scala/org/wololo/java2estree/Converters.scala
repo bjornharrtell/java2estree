@@ -11,7 +11,9 @@ import org.eclipse.jdt.core.dom.Modifier
 
 object Converters extends LazyLogging {
   def toProgram(cu : dom.CompilationUnit) : Program = {
-    val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toModuleDeclarations(x) };
+    // TODO: import current package types
+    // TODO: import java.lang.*
+    val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toImportDeclarations(x) } flatten;
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => toStatements(x) } flatten;
     val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
     new Program("module", imports ++ exportedTypes)
@@ -57,12 +59,18 @@ object Converters extends LazyLogging {
     )
   }
   
-  def toModuleDeclarations(implicit id: dom.ImportDeclaration): Node = {
-    val orgname = id.getName.getFullyQualifiedName
-    val path = orgname.replace('.', '/')
-    val name = orgname.split('.').last
-    val s = List(new ImportDefaultSpecifier(new Identifier(name)))
-    new ImportDeclaration(s, new Literal(s"'${path}'", s"'${path}'"))
+  def toImportDeclarations(implicit id: dom.ImportDeclaration): Iterable[ImportDeclaration] = {
+    if (id.isOnDemand) {
+      // TODO: generate ImportDeclarations for each java file in the package except the current
+      List()
+    }
+    else {
+      val orgname = id.getName.getFullyQualifiedName
+      val path = orgname.replace('.', '/')
+      val name = orgname.split('.').last
+      val s = List(new ImportDefaultSpecifier(new Identifier(name)))
+      List(new ImportDeclaration(s, new Literal(s"'${path}'", s"'${path}'")))
+    }
   }
   
   def toStatements(implicit td: dom.TypeDeclaration): Iterable[Node] = {

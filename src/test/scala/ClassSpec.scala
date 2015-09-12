@@ -28,4 +28,26 @@ class ClassSpec extends FlatSpec with Matchers {
 
     java2js(java) should equal (expected)
   }
+  
+  "A Class with extends" should "translate into a Class with extends" in {
+    val java =
+"""
+    class Test extends Object {
+    }
+
+"""
+    
+    val expected =
+"""
+    export default class Test extends Object {
+      constructor(...args) {
+        this.init_(...args);
+      }
+      init_() {}
+    }
+
+"""
+
+    java2js(java) should equal (expected)
+  }
 }

@@ -115,9 +115,9 @@ object Converters extends LazyLogging {
     
     val body = new ClassBody(List(constructor, initMethod) ++ memberMethods ++ staticMethods)
     
-    val superClass = if (td.getSuperclass != null) new Identifier(td.getSuperclass.getFullyQualifiedName) else null
+    val superClass = if (td.getSuperclassType != null) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
     val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass)
     
-    List(declaration) ++ staticFields ++ staticInnerClasses
+    List(declaration) ++ staticInnerClasses ++ staticFields 
   }
 }

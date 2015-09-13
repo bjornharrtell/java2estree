@@ -8,15 +8,19 @@ import StatementConverters._
 import MethodDefinitionConverters._
 import com.typesafe.scalalogging.LazyLogging
 import org.eclipse.jdt.core.dom.Modifier
+import com.google.common.io.Files
+import java.io.File
 
 object Converters extends LazyLogging {
-  def toProgram(cu : dom.CompilationUnit) : Program = {
-    // TODO: import current package types
-    // TODO: import java.lang.*
-    val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toImportDeclarations(x) } flatten;
+  def toProgram(cu : dom.CompilationUnit, path: String, filename: String) : Program = {
+    val packageImports = if (cu.getPackage != null) 
+      importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
+    else 
+      List()
+    val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toImportDeclarations(x, path) } flatten;
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => toStatements(x) } flatten;
     val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
-    new Program("module", imports ++ exportedTypes)
+    new Program("module", builtinImports ++ packageImports ++ imports ++ exportedTypes)
   }
     
   /*def classExpression(td : dom.TypeDeclaration) = {
@@ -59,10 +63,39 @@ object Converters extends LazyLogging {
     )
   }
   
-  def toImportDeclarations(implicit id: dom.ImportDeclaration): Iterable[ImportDeclaration] = {
+  def builtinImports() : Iterable[ImportDeclaration] = {
+    def defImport(name: String, path: String) = 
+      new ImportDeclaration(
+          List(new ImportDefaultSpecifier(new Identifier(name))),
+          new Literal(s"'${path}'", s"'${path}'"))
+    
+    List(
+        defImport("Double", "java.lang.Double")
+    )
+  }
+  
+  def importsFromName(name: String, path: String, ignore: String = null) : Iterable[ImportDeclaration] = {
+    val subpath = name.replace('.', '/')
+    val subname = name.split('.').last
+ 
+    def isJava(file: File): Boolean = {
+      val split = file.getName.split('.')
+      if (split.length != 2) return false
+      if (split(1) == "java") return true
+      return false
+    }
+    
+    new File(path  + '/' + subpath).listFiles.filter({ x => x.getName.split('.')(0) != ignore }).collect { case x if isJava(x) => {
+      val name = x.getName.split('.')(0)
+      val path = subpath + '/' + name
+      val s = List(new ImportDefaultSpecifier(new Identifier(name)))
+      new ImportDeclaration(s, new Literal(s"'${path}'", s"'${path}'"))
+    } }
+  }
+  
+  def toImportDeclarations(id: dom.ImportDeclaration, path: String): Iterable[ImportDeclaration] = {
     if (id.isOnDemand) {
-      // TODO: generate ImportDeclarations for each java file in the package except the current
-      List()
+      importsFromName(id.getName.getFullyQualifiedName, path)
     }
     else {
       val orgname = id.getName.getFullyQualifiedName

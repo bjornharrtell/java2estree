@@ -73,7 +73,10 @@ object StatementConverters {
       val call = new CallExpression(callee, toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.SuperConstructorInvocation =>
-      val call = new CallExpression(new Super(), toExpressions(x.arguments))
+      //val call = new CallExpression(new Super(), toExpressions(x.arguments))
+      //new ExpressionStatement(call)
+      val callee = new MemberExpression(new Super(), new Identifier("init_"), false)
+      val call = new CallExpression(callee, toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.Block => toBlockStatement(x)
     case x: dom.VariableDeclarationStatement =>

@@ -10,6 +10,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.eclipse.jdt.core.dom.Modifier
 import com.google.common.io.Files
 import java.io.File
+import org.eclipse.jdt.core.dom.SuperConstructorInvocation
 
 object Converters extends LazyLogging {
   def toProgram(cu : dom.CompilationUnit, path: String, filename: String) : Program = {
@@ -46,17 +47,21 @@ object Converters extends LazyLogging {
       new BlockStatement(
         bs.statements collect { case statement: dom.Statement => toStatement(statement)})
   
-  def createConstructor = {
+  def createConstructor(hasSuper: Boolean) = {
+    val args = List(new SpreadElement(new Identifier("args")))
+    val init = new ExpressionStatement(
+        new CallExpression(
+            new MemberExpression(new ThisExpression(), new Identifier("init_"), false),
+            args
+        )
+    )
+    val superCall = new ExpressionStatement(new CallExpression(new Super(), args))
+    val statements = if (hasSuper) List(superCall, init) else List(init) 
     new MethodDefinition(
       new Identifier("constructor"),
       new FunctionExpression(
-        List(new RestElement(new Identifier("args"))),
-        new BlockStatement(List(new ExpressionStatement(
-            new CallExpression(
-              new MemberExpression(new ThisExpression(), new Identifier("init_"), false),
-              List(new SpreadElement(new Identifier("args"))
-              ))))
-        )),
+        List(new RestElement(new Identifier("args"))), new BlockStatement(statements)
+      ),
       "constructor",
       false,
       false
@@ -70,7 +75,7 @@ object Converters extends LazyLogging {
           new Literal(s"'${path}'", s"'${path}'"))
     
     List(
-        defImport("Double", "java.lang.Double")
+        defImport("Double", "java/lang/Double")
     )
   }
   
@@ -129,7 +134,7 @@ object Converters extends LazyLogging {
           false
       )
       
-    val constructor = createConstructor
+    val constructor = createConstructor(td.getSuperclassType != null)
     
     val memberMethods = methods.filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
         case (name, methods) if methods.length == 1 =>

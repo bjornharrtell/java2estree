@@ -47,16 +47,19 @@ object MethodDefinitionConverters {
       } else null
     }
     
-    val arrowFunction = if (declarations.size > 1)
-      new ArrowFunctionExpression(toIdentifiers(declarations.head.parameters), convertTypeOverloads(declarations), false)
-    else 
+    val arrowFunction = if (declarations.size > 1) {
+      // TODO: need to create alias for parameters if they differ in name.. or cheat and fix that in the Java code..
+      
+      val body = new BlockStatement(List(convertTypeOverloads(declarations)))  
+      new ArrowFunctionExpression(toIdentifiers(declarations.head.parameters), body, false)
+    } else 
       toArrowFunctionExpression(declarations.head)
     
     val args = List(new SpreadElement(new Identifier("args")))
     new ReturnStatement(new CallExpression(arrowFunction, args))
   }
   
-  def parseAll(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : BlockStatement = {
+  def parseAll(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
     val cases = x.groupBy { _.parameters.length }.collect {
       case (k, v) => 
         new SwitchCase(new Literal(k, k.toString), List(parseSameArgLength(v)))

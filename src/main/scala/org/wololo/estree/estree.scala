@@ -141,9 +141,9 @@ class AssignmentExpression (
 ) extends Expression
 
 class LogicalExpression (
-  operator: String,
-  left: Expression,
-  right: Expression
+  val operator: String,
+  val left: Expression,
+  val right: Expression
 ) extends Expression
 
 class ConditionalExpression (

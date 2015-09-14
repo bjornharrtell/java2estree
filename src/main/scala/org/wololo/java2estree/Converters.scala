@@ -14,14 +14,17 @@ import org.eclipse.jdt.core.dom.SuperConstructorInvocation
 
 object Converters extends LazyLogging {
   def toProgram(cu : dom.CompilationUnit, path: String, filename: String) : Program = {
-    val packageImports = if (cu.getPackage != null) 
+    /*val packageImports = if (cu.getPackage != null) 
       importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
     else 
-      List()
+      List()*/
     val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toImportDeclarations(x, path) } flatten;
+    
+    //val distinctImports = (builtinImports ++ packageImports ++ imports).groupBy(_.source.raw).mapValues(_.head).map(_._2)
+    
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => toStatements(x) } flatten;
     val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
-    new Program("module", builtinImports ++ packageImports ++ imports ++ exportedTypes)
+    new Program("module", builtinImports ++ imports ++ exportedTypes)
   }
     
   /*def classExpression(td : dom.TypeDeclaration) = {
@@ -90,7 +93,11 @@ object Converters extends LazyLogging {
       return false
     }
     
-    new File(path  + '/' + subpath).listFiles.filter({ x => x.getName.split('.')(0) != ignore }).collect { case x if isJava(x) => {
+    val file = new File(path + '/' + subpath)
+    val files = file.listFiles
+    if (files == null) return List()
+    
+    files.filter({ x => x.getName.split('.')(0) != ignore }).collect { case x if isJava(x) => {
       val name = x.getName.split('.')(0)
       val path = subpath + '/' + name
       val s = List(new ImportDefaultSpecifier(new Identifier(name)))
@@ -112,7 +119,6 @@ object Converters extends LazyLogging {
   }
   
   def toStatements(implicit td: dom.TypeDeclaration): Iterable[Node] = {
-    
     val fields = td.getFields
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) }
     val types = td.getTypes

@@ -21,6 +21,48 @@ object MethodDefinitionConverters {
       toBlockStatement(x.getBody)
     )
   
+  def varToBinaryExpression(x: dom.SingleVariableDeclaration) = {
+    val identifier = resolveSimpleName(x.getName)
+    val typeName = x.getType.resolveBinding().getName
+    if (typeName == "int") {
+      new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false)      
+    } else if (typeName == "double") {
+      new UnaryExpression("!", true, new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false))
+    } else
+      toInstanceOf(identifier, typeName)
+  }
+  
+  def parseSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
+    def convertTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
+      if (mds.size > 0) {
+        val es = mds.head.parameters collect { case x: dom.SingleVariableDeclaration => varToBinaryExpression(x) }
+        val test = if (es.size == 2) new LogicalExpression("&&", es(0), es(1)) else es(0)
+        val consequent = toBlockStatement(mds.head.getBody)
+        new IfStatement(test, consequent, convertTypeOverloads(mds.tail))
+      } else null
+    }
+    
+    val arrowFunction = if (declarations.size > 1)
+      new ArrowFunctionExpression(toIdentifiers(declarations.head.parameters), convertTypeOverloads(declarations), false)
+    else 
+      toArrowFunctionExpression(declarations.head)
+    
+    val args = List(new SpreadElement(new Identifier("args")))
+    new ReturnStatement(new CallExpression(arrowFunction, args))
+  }
+  
+  def parseAll(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : BlockStatement = {
+    val cases = x.groupBy { _.parameters.length }.collect {
+      case (k, v) => 
+        new SwitchCase(new Literal(k, k.toString), List(parseSameArgLength(v)))
+    }
+    var switch = new SwitchStatement(
+      new MemberExpression(new Identifier("args"), new Identifier("length"), false),
+      cases
+    )
+    new BlockStatement(List(switch))
+  }
+  
   def fromMethodDeclaration(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
     new MethodDefinition(
       new Identifier(x.getName.getIdentifier),
@@ -30,31 +72,8 @@ object MethodDefinitionConverters {
       false,
       dom.Modifier.isStatic(x.getModifiers)
     )
- 
+  
   def fromMethodDeclarationOverloads(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
-    
-    def parseSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
-      List(
-        // TODO: consider multiple declarations, switch them on parameter type
-        new ReturnStatement(new CallExpression(
-          toArrowFunctionExpression(declarations.head),
-          List(new SpreadElement(new Identifier("args")))
-        ))
-      )
-    }
-    
-    def parseAll(x: Iterable[dom.MethodDeclaration]) : BlockStatement = {
-      val cases = x.groupBy { _.parameters.length }.collect {
-        case (k, v) => 
-          new SwitchCase(new Literal(k, k.toString), parseSameArgLength(v))
-      }
-      var switch = new SwitchStatement(
-        new MemberExpression(new Identifier("args"), new Identifier("length"), false),
-        cases
-      )
-      new BlockStatement(List(switch))
-    }
-    
     new MethodDefinition(
       new Identifier(x.head.getName.getIdentifier),
       new FunctionExpression(
@@ -92,31 +111,7 @@ object MethodDefinitionConverters {
     dom.Modifier.isStatic(x.getModifiers)
   )
   
-  def fromConstructorDeclarationOverloads(x: Iterable[dom.MethodDeclaration], fieldInits: Iterable[Statement])(implicit td: dom.TypeDeclaration) = {
-    
-    def parseSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
-      List(
-        // TODO: consider multiple declarations, switch them on parameter type
-        new ReturnStatement(new CallExpression(
-          toArrowFunctionExpression(declarations.head),
-          List(new SpreadElement(new Identifier("args")))
-        ))//,
-        //new ExpressionStatement(new Identifier("break"))
-      )
-    }
-    
-    def parseAll(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : BlockStatement = {
-      val cases = x.groupBy { _.parameters.length }.collect {
-        case (k, v) => 
-          new SwitchCase(new Literal(k, k.toString), parseSameArgLength(v))
-      }
-      var switch = new SwitchStatement(
-        new MemberExpression(new Identifier("args"), new Identifier("length"), false),
-        cases
-      )
-      new BlockStatement(List(switch))
-    } 
-    
+  def fromConstructorDeclarationOverloads(x: Iterable[dom.MethodDeclaration], fieldInits: Iterable[Statement])(implicit td: dom.TypeDeclaration) = {  
     new MethodDefinition(new Identifier("init_"),
       new FunctionExpression(
         List(new RestElement(new Identifier("args"))),

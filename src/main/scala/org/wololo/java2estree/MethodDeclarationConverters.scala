@@ -36,7 +36,12 @@ object MethodDefinitionConverters {
     def convertTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
       if (mds.size > 0) {
         val es = mds.head.parameters collect { case x: dom.SingleVariableDeclaration => varToBinaryExpression(x) }
-        val test = if (es.size == 2) new LogicalExpression("&&", es(0), es(1)) else es(0)
+        val test = if (es.size == 3) 
+          new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1)))
+        else if (es.size == 2) 
+          new LogicalExpression("&&", es(0), es(1))
+        else 
+          es(0)
         val consequent = toBlockStatement(mds.head.getBody)
         new IfStatement(test, consequent, convertTypeOverloads(mds.tail))
       } else null

@@ -48,6 +48,8 @@ object ExpressionConversions extends LazyLogging {
   def translateToken(token: String) =
     if (token.last == 'L')
       token.substring(0, token.length-1)
+    else if (token.last == 'D')
+      token.substring(0, token.length-1)
     else token
     
   def toBinaryExpression(op: String, l: Buffer[Expression]) : BinaryExpression =
@@ -109,8 +111,7 @@ object ExpressionConversions extends LazyLogging {
       // TODO: special case handle cast double/float -> int
       toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
-      new NewExpression(
-          new Identifier(x.getType.toString), toExpressions(x.arguments))
+      new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
       if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess when parsing " + x + " with parent " + x.getParent)
       val t = if (dom.Modifier.isStatic(x.resolveFieldBinding.getModifiers))
@@ -119,9 +120,8 @@ object ExpressionConversions extends LazyLogging {
         new ThisExpression()
       new MemberExpression(t, new Identifier(x.getName.getIdentifier), false)
     case x: dom.MethodInvocation =>
-      if (x.resolveMethodBinding == null) {
+      if (x.resolveMethodBinding == null)
         throw new RuntimeException("Cannot resolve binding of MethodInvocation when parsing " + x + " with parent " + x.getParent)
-      }
       val t = if (x.getExpression == null && !dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers)) 
         new ThisExpression()
       else if (x.getExpression == null && dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers))

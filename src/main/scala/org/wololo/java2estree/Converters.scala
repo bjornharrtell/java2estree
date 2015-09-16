@@ -14,17 +14,18 @@ import org.eclipse.jdt.core.dom.SuperConstructorInvocation
 
 object Converters extends LazyLogging {
   def toProgram(cu : dom.CompilationUnit, path: String, filename: String) : Program = {
-    /*val packageImports = if (cu.getPackage != null) 
+    // TODO: need to make this smarter and only keep package imports that are actually used in the source
+    // TODO: probably a good idea to mark used imports as they are resolved
+    val packageImports = if (cu.getPackage != null)
       importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
     else 
-      List()*/
+      List()
     val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toImportDeclarations(x, path) } flatten;
-    
-    //val distinctImports = (builtinImports ++ packageImports ++ imports).groupBy(_.source.raw).mapValues(_.head).map(_._2)
-    
+    // TODO: better to remove packageImports that already are in imports 
+    val distinctImports = (builtinImports ++ packageImports ++ imports).groupBy(_.source.raw).mapValues(_.head).map(_._2)
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => toStatements(x) } flatten;
     val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
-    new Program("module", builtinImports ++ imports ++ exportedTypes)
+    new Program("module", distinctImports ++ exportedTypes)
   }
     
   /*def classExpression(td : dom.TypeDeclaration) = {
@@ -53,10 +54,10 @@ object Converters extends LazyLogging {
   def createConstructor(hasSuper: Boolean) = {
     val args = List(new SpreadElement(new Identifier("args")))
     val init = new ExpressionStatement(
-        new CallExpression(
-            new MemberExpression(new ThisExpression(), new Identifier("init_"), false),
-            args
-        )
+      new CallExpression(
+        new MemberExpression(new ThisExpression(), new Identifier("init_"), false),
+        args
+      )
     )
     val superCall = new ExpressionStatement(new CallExpression(new Super(), args))
     val statements = if (hasSuper) List(superCall, init) else List(init) 
@@ -74,11 +75,11 @@ object Converters extends LazyLogging {
   def builtinImports() : Iterable[ImportDeclaration] = {
     def defImport(name: String, path: String) = 
       new ImportDeclaration(
-          List(new ImportDefaultSpecifier(new Identifier(name))),
+        List(new ImportDefaultSpecifier(new Identifier(name))),
           new Literal(s"'${path}'", s"'${path}'"))
     
     List(
-        defImport("Double", "java/lang/Double")
+      defImport("Double", "java/lang/Double")
     )
   }
   
@@ -106,9 +107,8 @@ object Converters extends LazyLogging {
   }
   
   def toImportDeclarations(id: dom.ImportDeclaration, path: String): Iterable[ImportDeclaration] = {
-    if (id.isOnDemand) {
+    if (id.isOnDemand)
       importsFromName(id.getName.getFullyQualifiedName, path)
-    }
     else {
       val orgname = id.getName.getFullyQualifiedName
       val path = orgname.replace('.', '/')
@@ -131,29 +131,29 @@ object Converters extends LazyLogging {
     val constructors = methods filter { _.isConstructor() }
     val initMethod = if (constructors.length == 1)
       fromConstructorDeclaration(constructors.head, memberFields)
-      else if (constructors.length > 1) fromConstructorDeclarationOverloads(constructors, memberFields)
-      else new MethodDefinition(
-          new Identifier("init_"),
-          new FunctionExpression(List(), new BlockStatement(List())),
-          "method",
-          false,
-          false
-      )
-      
+    else if (constructors.length > 1) fromConstructorDeclarationOverloads(constructors, memberFields)
+    else new MethodDefinition(
+      new Identifier("init_"),
+      new FunctionExpression(List(), new BlockStatement(List())),
+      "method",
+      false,
+      false
+    )
+    
     val constructor = createConstructor(td.getSuperclassType != null)
     
     val memberMethods = methods.filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
-        case (name, methods) if methods.length == 1 =>
-          List(fromMethodDeclaration(methods.head))
-        case (name, methods) if methods.length > 1 =>
-          List(fromMethodDeclarationOverloads(methods))
+      case (name, methods) if methods.length == 1 =>
+        List(fromMethodDeclaration(methods.head))
+      case (name, methods) if methods.length > 1 =>
+        List(fromMethodDeclarationOverloads(methods))
     } flatten
       
     val staticMethods = methods.filter(m => !m.isConstructor() && Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
-        case (name, methods) if methods.length == 1 =>
-          List(fromMethodDeclaration(methods.head))
-        case (name, methods) if methods.length > 1 =>
-          List(fromMethodDeclarationOverloads(methods))
+      case (name, methods) if methods.length == 1 =>
+        List(fromMethodDeclaration(methods.head))
+      case (name, methods) if methods.length > 1 =>
+        List(fromMethodDeclarationOverloads(methods))
     } flatten
     
     // TODO: Member inner classes should probably defined as getters

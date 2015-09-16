@@ -192,6 +192,10 @@ class SpreadElement (
 
 trait Pattern extends Node
 
+class ArrayPattern (
+  val elements: Iterable[Pattern]
+) extends Pattern
+
 class RestElement (
   val argument: Pattern
 ) extends Pattern

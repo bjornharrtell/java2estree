@@ -8,55 +8,67 @@ import ExpressionConversions._
 import StatementConverters._
 
 object MethodDefinitionConverters {
-  def toArrowFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = 
-    new ArrowFunctionExpression(
-      toIdentifiers(x.parameters),
-      toBlockStatement(x.getBody),
-      false
-    )
-  
   def toFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
     new FunctionExpression(
       toIdentifiers(x.parameters),
       toBlockStatement(x.getBody)
     )
   
-  def varToBinaryExpression(x: dom.SingleVariableDeclaration) = {
-    val identifier = resolveSimpleName(x.getName)
+  def varToBinaryExpression(x: dom.SingleVariableDeclaration, i: Int) = {
+    val identifier = new MemberExpression(new Identifier("args"), new Literal(i, i.toString), true) //resolveSimpleName(x.getName)
     val typeName = x.getType.resolveBinding().getName
-    if (typeName == "int") {
+    
+    if (x.getType.isArrayType())
+      toInstanceOf(identifier, "Array")
+    else if (typeName == "int")
       new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false)      
-    } else if (typeName == "double") {
+    else if (typeName == "double")
       new UnaryExpression("!", true, new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false))
-    } else
+    else
       toInstanceOf(identifier, typeName)
   }
   
-  def parseSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
+  def toArrowFunction(md: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = {
+    val statements = toBlockStatement(md.getBody).body.toList
+    val patterns = md.parameters.collect({ case x: dom.SingleVariableDeclaration => new Identifier(x.getName.getIdentifier) })
+    val let = new VariableDeclaration(
+        List(new VariableDeclarator(
+            new ArrayPattern(patterns),
+            new Identifier("args")
+        )),
+        "let"
+    )
+    new ArrowFunctionExpression(
+      List(new RestElement(new Identifier("args"))),
+      new BlockStatement(let +: statements),
+      false
+    )
+  }
+  
+  def parseSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : Statement = {
     def convertTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
       if (mds.size > 0) {
-        val es = mds.head.parameters collect { case x: dom.SingleVariableDeclaration => varToBinaryExpression(x) }
+        val es = mds.head.parameters.collect({ case x: dom.SingleVariableDeclaration => x }).zipWithIndex map { case (x, i) => varToBinaryExpression(x, i) }
         val test = if (es.size == 3) 
           new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1)))
         else if (es.size == 2) 
           new LogicalExpression("&&", es(0), es(1))
         else 
           es(0)
-        val consequent = toBlockStatement(mds.head.getBody)
+        val args = List(new SpreadElement(new Identifier("args")))
+        val call = new CallExpression(toArrowFunction(mds.head), args)
+        val consequent = new BlockStatement(List(new ReturnStatement(call)))
         new IfStatement(test, consequent, convertTypeOverloads(mds.tail))
       } else null
     }
     
-    val arrowFunction = if (declarations.size > 1) {
-      // TODO: need to create alias for parameters if they differ in name.. or cheat and fix that in the Java code..
-      
+    if (declarations.size > 1) {
       val body = new BlockStatement(List(convertTypeOverloads(declarations)))  
-      new ArrowFunctionExpression(toIdentifiers(declarations.head.parameters), body, false)
-    } else 
-      toArrowFunctionExpression(declarations.head)
-    
-    val args = List(new SpreadElement(new Identifier("args")))
-    new ReturnStatement(new CallExpression(arrowFunction, args))
+      convertTypeOverloads(declarations)
+    } else {
+       val args = List(new SpreadElement(new Identifier("args")))
+       new ReturnStatement(new CallExpression(toArrowFunction(declarations.head), args))
+    }
   }
   
   def parseAll(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {

@@ -18,7 +18,7 @@ object StatementConverters {
     else 
       switchCases
   }
-    
+
   def convertCatchClauses(clauses: Iterable[dom.CatchClause])(implicit td: dom.TypeDeclaration) : IfStatement = {
     if (clauses.size > 0) {
       val test = toInstanceOf(new Identifier("e"), clauses.head.getException.getType.resolveBinding().getName)

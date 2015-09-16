@@ -29,7 +29,7 @@ object Utils {
     val program = Converters.toProgram(cu, "", "Test.java")
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
-    val pb = new ProcessBuilder(List("./node_modules/astring/bin/astring", "--indent", "  ", "--startingIndentLevel", "2").asJava)
+    val pb = new ProcessBuilder(List("./node_modules/astring/bin/astring", "--indent", "  ", "--starting-indent-level", "2").asJava)
     val p = pb.start()
     mapper.writeValue(p.getOutputStream, program)
     "\n" + CharStreams.toString(new InputStreamReader(p.getInputStream, "UTF-8"))

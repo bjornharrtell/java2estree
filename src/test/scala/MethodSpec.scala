@@ -84,15 +84,18 @@ class MethodSpec extends FlatSpec with Matchers {
       add(...args) {
         switch (args.length) {
           case 2:
-            return ((x, y) => {
+            return ((...args) => {
+              let [x, y] = args;
               return x + y;
             })(...args);
           case 1:
-            return ((x) => {
+            return ((...args) => {
+              let [x] = args;
               return x;
             })(...args);
           case 0:
-            return (() => {
+            return ((...args) => {
+              let [] = args;
               return null;
             })(...args);
         }

@@ -15,9 +15,8 @@ object MethodDefinitionConverters {
     )
   
   def varToBinaryExpression(x: dom.SingleVariableDeclaration, i: Int) = {
-    val identifier = new MemberExpression(new Identifier("args"), new Literal(i, i.toString), true) //resolveSimpleName(x.getName)
+    val identifier = new MemberExpression(new Identifier("args"), new Literal(i, i.toString), true)
     val typeName = x.getType.resolveBinding().getName
-    
     if (x.getType.isArrayType())
       toInstanceOf(identifier, "Array")
     else if (typeName == "int")
@@ -30,13 +29,10 @@ object MethodDefinitionConverters {
   
   def toArrowFunction(md: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = {
     val statements = toBlockStatement(md.getBody).body.toList
-    val patterns = md.parameters.collect({ case x: dom.SingleVariableDeclaration => new Identifier(x.getName.getIdentifier) })
+    val patterns = toIdentifiers(md.parameters)
     val let = new VariableDeclaration(
-        List(new VariableDeclarator(
-            new ArrayPattern(patterns),
-            new Identifier("args")
-        )),
-        "let"
+      List(new VariableDeclarator(new ArrayPattern(patterns), new Identifier("args"))),
+      "let"
     )
     new ArrowFunctionExpression(
       List(new RestElement(new Identifier("args"))),
@@ -113,13 +109,16 @@ object MethodDefinitionConverters {
         toExpression(field.getInitializer)))
   }
   
-  def fromFieldDeclarationStatic(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = 
+  def fromFieldDeclarationStatic(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = { 
     declaration.fragments collect { 
-      case field: dom.VariableDeclarationFragment if dom.Modifier.isStatic(declaration.getModifiers) =>
+      case field: dom.VariableDeclarationFragment if dom.Modifier.isStatic(declaration.getModifiers) => {
+        if (field.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of VariableDeclarationFragment when parsing " + field + " with parent " + field.getParent)    
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-        new Identifier(field.resolveBinding().getDeclaringClass.getName),
+        new Identifier(field.resolveBinding.getDeclaringClass.getName),
         new Identifier(field.getName.getIdentifier), false),
         toExpression(field.getInitializer)))
+      }
+    }
   }
   
   def fromConstructorDeclaration(x: dom.MethodDeclaration, fieldInits: Iterable[Statement])(implicit td: dom.TypeDeclaration) = new MethodDefinition(

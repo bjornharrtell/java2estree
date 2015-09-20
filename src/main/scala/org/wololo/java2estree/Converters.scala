@@ -12,20 +12,19 @@ import com.google.common.io.Files
 import java.io.File
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation
 
+
+
 object Converters extends LazyLogging {
   def toProgram(cu : dom.CompilationUnit, path: String, filename: String) : Program = {
-    // TODO: need to make this smarter and only keep package imports that are actually used in the source
-    // TODO: probably a good idea to mark used imports as they are resolved
-    val packageImports = if (cu.getPackage != null)
+    /*val packageImports = if (cu.getPackage != null)
       importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
     else 
-      List()
+      List()*/
     val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toImportDeclarations(x, path) } flatten;
-    // TODO: better to remove packageImports that already are in imports 
-    val distinctImports = (builtinImports ++ packageImports ++ imports).groupBy(_.source.raw).mapValues(_.head).map(_._2)
+    //val distinctImports = (builtinImports ++ packageImports ++ imports).groupBy(_.source.raw).mapValues(_.head).map(_._2)
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => toStatements(x) } flatten;
     val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
-    new Program("module", distinctImports ++ exportedTypes)
+    new Program("module", imports ++ exportedTypes)
   }
     
   /*def classExpression(td : dom.TypeDeclaration) = {

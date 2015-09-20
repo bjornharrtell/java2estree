@@ -9,6 +9,8 @@ import com.typesafe.scalalogging.LazyLogging
 object ExpressionConversions extends LazyLogging {
   def resolveSimpleName(s: dom.SimpleName) = { 
     //println(s)
+    //println(s.resolveTypeBinding().getQualifiedName)
+    // TODO: use s.resolveTypeBinding().getQualifiedName to record needed imports
     if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
     s.resolveBinding match { 
       case b: dom.IVariableBinding if b.isParameter() =>
@@ -28,6 +30,7 @@ object ExpressionConversions extends LazyLogging {
   
   def resolveQualifiedName(q: dom.QualifiedName) = {
     //println(q)
+    //println(q.resolveTypeBinding().getQualifiedName)
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
     q.getQualifier.resolveBinding match { 
       case b: dom.IVariableBinding =>

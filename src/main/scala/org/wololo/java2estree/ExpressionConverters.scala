@@ -7,6 +7,11 @@ import org.eclipse.jdt.core.dom
 import com.typesafe.scalalogging.LazyLogging
 
 object ExpressionConversions extends LazyLogging {
+  def resolve(name: dom.Name) = if (name.isSimpleName())
+    resolveSimpleName(name.asInstanceOf[dom.SimpleName])
+  else
+    resolveQualifiedName(name.asInstanceOf[dom.QualifiedName])
+  
   def resolveSimpleName(s: dom.SimpleName) = { 
     //println(s)
     //println(s.resolveTypeBinding().getQualifiedName)
@@ -25,20 +30,22 @@ object ExpressionConversions extends LazyLogging {
         new MemberExpression(member, new Identifier(s.getFullyQualifiedName), false)
       case b: dom.ITypeBinding =>
         new Identifier(s.getFullyQualifiedName)
+      case b: dom.IPackageBinding =>
+        new Identifier(s.getFullyQualifiedName)
     }
   }
   
-  def resolveQualifiedName(q: dom.QualifiedName) = {
+  def resolveQualifiedName(q: dom.QualifiedName): Expression  = {
     //println(q)
     //println(q.resolveTypeBinding().getQualifiedName)
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
     q.getQualifier.resolveBinding match { 
       case b: dom.IVariableBinding =>
-        new Identifier(q.getFullyQualifiedName)
+        new MemberExpression(resolve(q.getQualifier), new Identifier(q.getName.getIdentifier), false)
       case b: dom.ITypeBinding =>
-        new Identifier(q.getFullyQualifiedName)
+        new MemberExpression(resolve(q.getQualifier), new Identifier(q.getName.getIdentifier), false)
       case b: dom.IPackageBinding =>
-        new Identifier(q.getFullyQualifiedName)
+        new MemberExpression(resolve(q.getQualifier), new Identifier(q.getName.getIdentifier), false)
     }
   }
   
@@ -53,6 +60,8 @@ object ExpressionConversions extends LazyLogging {
       token.substring(0, token.length-1)
     else if (token.last == 'D')
       token.substring(0, token.length-1)
+    else if (token.last == 'd')
+      token.substring(0, token.length-1)
     else token
     
   def toBinaryExpression(op: String, l: Buffer[Expression]) : BinaryExpression =
@@ -62,13 +71,13 @@ object ExpressionConversions extends LazyLogging {
       new BinaryExpression(op, l.head, l.get(1))
   
   def toInstanceOf(e: Expression, typeName: String) =
-    new BinaryExpression("instanceof", e, new Literal(typeName, typeName))
+    new BinaryExpression("instanceof", e, new Identifier(typeName))
   
   def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     expressions collect { case x: dom.Expression => toExpression(x)}
   
   def toExpression(e: dom.Expression)(implicit td: dom.TypeDeclaration): Expression = e match {
-    case nl: dom.NullLiteral => new Literal("null", "null")
+    case nl: dom.NullLiteral => new Literal(null, "null")
     case x: dom.SimpleName => resolveSimpleName(x)
     case x: dom.QualifiedName => resolveQualifiedName(x)
     case x: dom.ThisExpression => new ThisExpression()
@@ -86,7 +95,7 @@ object ExpressionConversions extends LazyLogging {
     case x: dom.StringLiteral =>
       new Literal(x.getLiteralValue, x.getEscapedValue)
     case x: dom.TypeLiteral =>
-      new Literal(x.getType.toString, x.getType.toString)
+      new Identifier(x.getType.toString)
     case x: dom.ArrayCreation =>
       val elements = if (x.getInitializer == null) List() else toExpressions(x.getInitializer.expressions)
       new ArrayExpression(elements)

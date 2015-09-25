@@ -18,6 +18,7 @@ import java.nio.file.StandardOpenOption
 
 object Cli extends App with LazyLogging {
   val path = new File(args(0))
+  val outpath = new File(args(1))
 
   val parser = ASTParser.newParser(AST.JLS8)
   
@@ -48,7 +49,9 @@ object Cli extends App with LazyLogging {
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     mapper.enable(SerializationFeature.INDENT_OUTPUT)
-    val os = Files.newOutputStream(Paths.get(file.getParent, baseName + ".ast"), StandardOpenOption.CREATE)
+    val fulloutpath = file.getParent.replaceAll(path.getPath, outpath.getPath)
+    new File(fulloutpath).mkdirs()
+    val os = Files.newOutputStream(Paths.get(fulloutpath, baseName + ".ast"), StandardOpenOption.CREATE)
     mapper.writeValue(os, program)
   }
 }

@@ -11,6 +11,9 @@ import org.eclipse.jdt.core.dom.Modifier
 import com.google.common.io.Files
 import java.io.File
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
 
 
@@ -20,9 +23,30 @@ object Converters extends LazyLogging {
       importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
     else 
       List()*/
-    val imports = cu.imports.toList collect { case x: dom.ImportDeclaration => toImportDeclarations(x, path) } flatten;
     //val distinctImports = (builtinImports ++ packageImports ++ imports).groupBy(_.source.raw).mapValues(_.head).map(_._2)
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => toStatements(x) } flatten;
+    val classDeclaration = types.head.asInstanceOf[ClassDeclaration]
+    
+    val mapper = new ObjectMapper
+    mapper.registerModule(DefaultScalaModule)
+    val tree = mapper.valueToTree[JsonNode](types)
+    
+    def countIdentifier(name: String) = 
+     tree.findParents("type").filter { x => x.get("type").asText() == "Identifier" && x.get("name").asText() == name }.size
+        
+    val packageImports = if (cu.getPackage != null)
+      importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
+    else 
+      Map[String, String]()
+          
+    val explicitImports = cu.imports.toList collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, path) };
+    val distinctImports = (builtinImports ++ packageImports ++ explicitImports) - classDeclaration.id.name
+    val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
+    
+    val imports = usedImports.collect { case (name, path) => defImport(name, path) }
+    
+    
+    
     val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
     new Program("module", imports ++ exportedTypes)
   }
@@ -71,18 +95,24 @@ object Converters extends LazyLogging {
     )
   }
   
-  def builtinImports() : Iterable[ImportDeclaration] = {
-    def defImport(name: String, path: String) = 
-      new ImportDeclaration(
+  def defImport(name: String, path: String) = {
+    new ImportDeclaration(
         List(new ImportDefaultSpecifier(new Identifier(name))),
           new Literal(s"'${path}'", s"'${path}'"))
-    
-    List(
-      defImport("Double", "java/lang/Double")
+  }
+  
+  def builtinImports() : Map[String, String] = {
+    Map(
+      ("Comparable" -> "java/lang/Comparable"),
+      ("Cloneable" -> "java/lang/Cloneable"),
+      ("Character" -> "java/lang/Character"),
+      ("Double" -> "java/lang/Double"),
+      ("Exception" -> "java/lang/Exception"),
+      ("RuntimeException" -> "java/lang/RuntimeException")
     )
   }
   
-  def importsFromName(name: String, path: String, ignore: String = null) : Iterable[ImportDeclaration] = {
+  def importsFromName(name: String, path: String, ignore: String = null) : Map[String, String] = {
     val subpath = name.replace('.', '/')
     val subname = name.split('.').last
  
@@ -95,26 +125,22 @@ object Converters extends LazyLogging {
     
     val file = new File(path + '/' + subpath)
     val files = file.listFiles
-    if (files == null) return List()
+    if (files == null) return Map()
     
-    files.filter({ x => x.getName.split('.')(0) != ignore }).collect { case x if isJava(x) => {
+    val pairs = files.filter({ x => x.getName.split('.')(0) != ignore }).collect { case x if isJava(x) => {
       val name = x.getName.split('.')(0)
       val path = subpath + '/' + name
-      val s = List(new ImportDefaultSpecifier(new Identifier(name)))
-      new ImportDeclaration(s, new Literal(s"'${path}'", s"'${path}'"))
+      (name -> path)
     } }
+    
+    Map(pairs: _*)
   }
   
-  def toImportDeclarations(id: dom.ImportDeclaration, path: String): Iterable[ImportDeclaration] = {
-    if (id.isOnDemand)
-      importsFromName(id.getName.getFullyQualifiedName, path)
-    else {
-      val orgname = id.getName.getFullyQualifiedName
-      val path = orgname.replace('.', '/')
-      val name = orgname.split('.').last
-      val s = List(new ImportDefaultSpecifier(new Identifier(name)))
-      List(new ImportDeclaration(s, new Literal(s"'${path}'", s"'${path}'")))
-    }
+  def fromImportDeclaration(id: dom.ImportDeclaration, path: String): (String, String) = {
+    val orgname = id.getName.getFullyQualifiedName
+    val path = orgname.replace('.', '/')
+    val name = orgname.split('.').last
+    (name -> path)
   }
   
   def toStatements(implicit td: dom.TypeDeclaration): Iterable[Node] = {

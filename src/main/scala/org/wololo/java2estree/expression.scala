@@ -70,8 +70,14 @@ object expression {
     else
       new BinaryExpression(op, l.head, l.get(1))
   
-  def toInstanceOf(e: Expression, typeName: String) =
-    new BinaryExpression("instanceof", e, new Identifier(typeName))
+  def toInstanceOf(e: Expression, typeName: String) = {
+    if (typeName == "String") {
+      val typeof = new UnaryExpression("typeof", true, e)
+      new BinaryExpression("===", typeof, new Literal("string", "\"string\""))
+    } else {
+      new BinaryExpression("instanceof", e, new Identifier(typeName))
+    }
+  }
   
   def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     expressions collect { case x: dom.Expression => toExpression(x)}

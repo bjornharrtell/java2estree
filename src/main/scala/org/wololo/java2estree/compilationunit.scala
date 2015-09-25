@@ -85,7 +85,8 @@ object compilationunit {
   def createInitMethod(constructors: Array[dom.MethodDeclaration], hasSuperclass: Boolean)(implicit td: dom.TypeDeclaration): MethodDefinition = {
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
 
-    val (params, statements) = (List(new RestElement(new Identifier("args"))), fromOverloadedMethodDeclarations(constructors).body)
+    val params = List(new RestElement(new Identifier("args")))
+    val statements = fromOverloadedMethodDeclarations(constructors).body
     
     val superInit = if (hasSuperclass) new ExpressionStatement(new CallExpression(new MemberExpression(new Super, new Identifier("init_"), false), List())) else null
     val defaultStatements = if (hasSuperclass) superInit +: memberFields else memberFields

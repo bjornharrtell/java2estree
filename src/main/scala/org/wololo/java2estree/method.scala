@@ -31,8 +31,10 @@ object method {
     val typeName = binding.getName
     if (x.getType.isArrayType())
       toInstanceOf(identifier, "Array")
+    else if (typeName == "boolean")
+      new BinaryExpression("===", new UnaryExpression("typeof", true, identifier), new Literal("boolean", "\"boolean\""))
     else if (typeName == "int")
-      new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false)      
+      new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false)
     else if (typeName == "double")
       new UnaryExpression("!", true, new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false))
     else if (isInterface)

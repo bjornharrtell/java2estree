@@ -3,9 +3,10 @@ package org.wololo.java2estree
 import org.wololo.estree._
 import scala.collection.JavaConversions._
 import org.eclipse.jdt.core.dom
-import ExpressionConversions._
-import StatementConverters._
-import MethodDefinitionConverters._
+import expression._
+import statement._
+import method._
+import importdeclaration._
 import com.typesafe.scalalogging.LazyLogging
 import org.eclipse.jdt.core.dom.Modifier
 import com.google.common.io.Files
@@ -15,8 +16,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
-object Converters extends LazyLogging {
-  def toProgram(cu : dom.CompilationUnit, path: String, filename: String) : Program = {
+object compilationunit {
+  def fromCompilationUnit(cu : dom.CompilationUnit, path: String, filename: String): Program = {
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => fromTypeDeclaration(x) } flatten;
     val classDeclaration = types.head.asInstanceOf[ClassDeclaration]
     
@@ -36,7 +37,7 @@ object Converters extends LazyLogging {
     val distinctImports = (builtinImports ++ packageImports ++ explicitImports) - classDeclaration.id.name
     val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
     
-    val imports = usedImports.collect { case (name, path) => defImport(name, path) }
+    val imports = usedImports.collect { case (name, path) => createImport(name, path) }
     
     val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
     new Program("module", imports ++ exportedTypes)
@@ -47,21 +48,18 @@ object Converters extends LazyLogging {
     new ClassExpression(body)
   }*/
   
-  def toIdentifier(x: dom.SingleVariableDeclaration): Identifier =
+  def fromSingleVariableDeclaration(x: dom.SingleVariableDeclaration): Identifier =
     new Identifier(x.getName.getIdentifier)
   
-  def toIdentifiers(parameters: java.util.List[_]) =
-    parameters collect { case x: dom.SingleVariableDeclaration => toIdentifier(x) }
+  def fromParameters(parameters: java.util.List[_]) = 
+    parameters collect { case x: dom.SingleVariableDeclaration => fromSingleVariableDeclaration(x) }
   
-  def toVariableDeclarator(vd: dom.VariableDeclarationFragment)(implicit td: dom.TypeDeclaration) =
-    new VariableDeclarator(new Identifier(vd.getName.getIdentifier), toExpression(vd.getInitializer))
-  
-  def toBlockStatement(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement =
+  def fromBlock(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement =
     if (bs == null)
       new BlockStatement(List())
     else
       new BlockStatement(
-        bs.statements collect { case statement: dom.Statement => toStatement(statement)})
+        bs.statements collect { case statement: dom.Statement => fromStatement(statement)})
   
   def createConstructor(hasSuper: Boolean) = {
     val args = List(new SpreadElement(new Identifier("args")))
@@ -84,60 +82,12 @@ object Converters extends LazyLogging {
     )
   }
   
-  def defImport(name: String, path: String) = {
-    new ImportDeclaration(
-        List(new ImportDefaultSpecifier(new Identifier(name))),
-          new Literal(s"'${path}'", s"'${path}'"))
-  }
-  
-  def builtinImports() : Map[String, String] = {
-    Map(
-      ("Comparable" -> "java/lang/Comparable"),
-      ("Cloneable" -> "java/lang/Cloneable"),
-      ("Character" -> "java/lang/Character"),
-      ("Double" -> "java/lang/Double"),
-      ("Exception" -> "java/lang/Exception"),
-      ("RuntimeException" -> "java/lang/RuntimeException")
-    )
-  }
-  
-  def importsFromName(name: String, path: String, ignore: String = null) : Map[String, String] = {
-    val subpath = name.replace('.', '/')
-    val subname = name.split('.').last
- 
-    def isJava(file: File): Boolean = {
-      val split = file.getName.split('.')
-      if (split.length != 2) return false
-      if (split(1) == "java") return true
-      return false
-    }
-    
-    val file = new File(path + '/' + subpath)
-    val files = file.listFiles
-    if (files == null) return Map()
-    
-    val pairs = files.filter({ x => x.getName.split('.')(0) != ignore }).collect { case x if isJava(x) => {
-      val name = x.getName.split('.')(0)
-      val path = subpath + '/' + name
-      (name -> path)
-    } }
-    
-    Map(pairs: _*)
-  }
-  
-  def fromImportDeclaration(id: dom.ImportDeclaration, path: String): (String, String) = {
-    val orgname = id.getName.getFullyQualifiedName
-    val path = orgname.replace('.', '/')
-    val name = orgname.split('.').last
-    (name -> path)
-  }
-  
   def createInitMethod(constructors: Array[dom.MethodDeclaration], hasSuperclass: Boolean)(implicit td: dom.TypeDeclaration): MethodDefinition = {
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
     
     val (params, statements) = constructors.length match {
-      case x if x == 1 => (toIdentifiers(constructors.head.parameters), toBlockStatement(constructors.head.getBody).body)
-      case x if x > 1 => (List(new RestElement(new Identifier("args"))), parseAll(constructors).body)
+      case x if x == 1 => (fromParameters(constructors.head.parameters), fromBlock(constructors.head.getBody).body)
+      case x if x > 1 => (List(new RestElement(new Identifier("args"))), fromOverloadedMethodDeclarations(constructors).body)
       case _ => (List(), List())
     }
     

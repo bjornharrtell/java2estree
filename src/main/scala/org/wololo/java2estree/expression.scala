@@ -6,7 +6,7 @@ import org.wololo.estree._
 import org.eclipse.jdt.core.dom
 import com.typesafe.scalalogging.LazyLogging
 
-object ExpressionConversions extends LazyLogging {
+object expression {
   def resolve(name: dom.Name) = if (name.isSimpleName())
     resolveSimpleName(name.asInstanceOf[dom.SimpleName])
   else

@@ -3,15 +3,15 @@ package org.wololo.java2estree
 import org.wololo.estree._
 import scala.collection.JavaConversions._
 import org.eclipse.jdt.core.dom
-import Converters._
-import ExpressionConversions._
-import StatementConverters._
+import compilationunit._
+import expression._
+import statement._
 
-object MethodDefinitionConverters {
+object method {
   def toFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
     new FunctionExpression(
-      toIdentifiers(x.parameters),
-      toBlockStatement(x.getBody)
+      fromParameters(x.parameters),
+      fromBlock(x.getBody)
     )
   
   def varToBinaryExpression(x: dom.SingleVariableDeclaration, i: Int) = {
@@ -28,8 +28,8 @@ object MethodDefinitionConverters {
   }
   
   def toArrowFunction(md: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = {
-    val statements = toBlockStatement(md.getBody).body.toList
-    val patterns = toIdentifiers(md.parameters)
+    val statements = fromBlock(md.getBody).body.toList
+    val patterns = fromParameters(md.parameters)
     val let = new VariableDeclaration(
       List(new VariableDeclarator(new ArrayPattern(patterns), new Identifier("args"))),
       "let"
@@ -41,36 +41,39 @@ object MethodDefinitionConverters {
     )
   }
   
-  def parseSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : Statement = {
-    def convertTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
-      if (mds.size > 0) {
-        val es = mds.head.parameters.collect({ case x: dom.SingleVariableDeclaration => x }).zipWithIndex map { case (x, i) => varToBinaryExpression(x, i) }
-        val test = if (es.size == 3) 
-          new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1)))
-        else if (es.size == 2) 
-          new LogicalExpression("&&", es(0), es(1))
-        else 
-          es(0)
+  
+  
+  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
+    def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): Statement = {
+      def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
+        if (mds.size > 0) {
+          val es = mds.head.parameters.collect({ case x: dom.SingleVariableDeclaration => x }).zipWithIndex map { case (x, i) => varToBinaryExpression(x, i) }
+          val test = if (es.size == 3) 
+            new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1)))
+          else if (es.size == 2) 
+            new LogicalExpression("&&", es(0), es(1))
+          else 
+            es(0)
+          val args = List(new SpreadElement(new Identifier("args")))
+          val call = new CallExpression(toArrowFunction(mds.head), args)
+          val consequent = new BlockStatement(List(new ReturnStatement(call)))
+          new IfStatement(test, consequent, fromTypeOverloads(mds.tail))
+        } else null
+      }
+      
+      if (declarations.size > 1) {
+        val body = new BlockStatement(List(fromTypeOverloads(declarations)))  
+        fromTypeOverloads(declarations)
+      } else {
         val args = List(new SpreadElement(new Identifier("args")))
-        val call = new CallExpression(toArrowFunction(mds.head), args)
-        val consequent = new BlockStatement(List(new ReturnStatement(call)))
-        new IfStatement(test, consequent, convertTypeOverloads(mds.tail))
-      } else null
+        new ReturnStatement(new CallExpression(toArrowFunction(declarations.head), args))
+      }
     }
     
-    if (declarations.size > 1) {
-      val body = new BlockStatement(List(convertTypeOverloads(declarations)))  
-      convertTypeOverloads(declarations)
-    } else {
-       val args = List(new SpreadElement(new Identifier("args")))
-       new ReturnStatement(new CallExpression(toArrowFunction(declarations.head), args))
-    }
-  }
-  
-  def parseAll(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
+    
     val cases = x.groupBy { _.parameters.length }.collect {
       case (k, v) => 
-        new SwitchCase(new Literal(k, k.toString), List(parseSameArgLength(v)))
+        new SwitchCase(new Literal(k, k.toString), List(fromSameArgLength(v)))
     }
     var switch = new SwitchStatement(
       new MemberExpression(new Identifier("args"), new Identifier("length"), false),
@@ -82,8 +85,8 @@ object MethodDefinitionConverters {
   def fromMethodDeclaration(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
     new MethodDefinition(
       new Identifier(x.getName.getIdentifier),
-      new FunctionExpression(toIdentifiers(x.parameters),
-          toBlockStatement(x.getBody)),
+      new FunctionExpression(fromParameters(x.parameters),
+          fromBlock(x.getBody)),
       "method",
       false,
       dom.Modifier.isStatic(x.getModifiers)
@@ -94,7 +97,7 @@ object MethodDefinitionConverters {
       new Identifier(x.head.getName.getIdentifier),
       new FunctionExpression(
           List(new RestElement(new Identifier("args"))),
-          parseAll(x)),
+          fromOverloadedMethodDeclarations(x)),
       "method",
       false,
       dom.Modifier.isStatic(x.head.getModifiers)

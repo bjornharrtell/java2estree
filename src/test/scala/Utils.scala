@@ -3,7 +3,7 @@ import java.io.StringReader
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
-import org.wololo.java2estree.Converters
+import org.wololo.java2estree.compilationunit
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -14,7 +14,7 @@ import org.eclipse.jdt.core.dom.AST
 import org.eclipse.jdt.core.dom.CompilationUnit
 
 object Utils {
-  import org.wololo.java2estree.Converters
+  import org.wololo.java2estree.compilationunit
   
   def java2js(java: String) : String = {
     val doc = new Document(java);
@@ -26,7 +26,7 @@ object Utils {
     parser.setUnitName("Test.java")
     parser.setSource(doc.get().toCharArray())
     val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
-    val program = Converters.toProgram(cu, "", "Test.java")
+    val program = compilationunit.fromCompilationUnit(cu, "", "Test.java")
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     val pb = new ProcessBuilder(List("./node_modules/astring/bin/astring", "--indent", "  ", "--starting-indent-level", "2").asJava)

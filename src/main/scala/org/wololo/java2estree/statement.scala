@@ -3,71 +3,72 @@ package org.wololo.java2estree
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Buffer
 import org.wololo.estree._
-import Converters._
-import ExpressionConversions._
+import compilationunit._
+import expression._
 import org.eclipse.jdt.core.dom
 
-object StatementConverters {
-  def toSwitchCases(x: Buffer[dom.Statement], accu: List[SwitchCase] = List())(implicit td: dom.TypeDeclaration) : List[SwitchCase] = {
+object statement {
+  def fromVariableDeclarationFragment(vd: dom.VariableDeclarationFragment)(implicit td: dom.TypeDeclaration) = 
+    new VariableDeclarator(new Identifier(vd.getName.getIdentifier), toExpression(vd.getInitializer))
+  
+  def fromSwitchCases(x: Buffer[dom.Statement], accu: List[SwitchCase] = List())(implicit td: dom.TypeDeclaration): List[SwitchCase] = {
     val switchCase = x.head.asInstanceOf[dom.SwitchCase]
-    val statements = x.tail.takeWhile { !_.isInstanceOf[dom.SwitchCase] } map { x => toStatement(x) }
+    val statements = x.tail.takeWhile { !_.isInstanceOf[dom.SwitchCase] } map { x => fromStatement(x) }
     val test = if (switchCase.getExpression == null) null else toExpression(switchCase.getExpression)
     val switchCases = accu :+ new SwitchCase(test, statements)
     if (x.length - 1 - statements.length>0)
-      toSwitchCases(x.drop(statements.length + 1), switchCases)
+      fromSwitchCases(x.drop(statements.length + 1), switchCases)
     else 
       switchCases
   }
 
-  def convertCatchClauses(clauses: Iterable[dom.CatchClause])(implicit td: dom.TypeDeclaration) : IfStatement = {
+  def fromCatchClauses(clauses: Iterable[dom.CatchClause])(implicit td: dom.TypeDeclaration): IfStatement = {
     if (clauses.size > 0) {
       val test = toInstanceOf(new Identifier("e"), clauses.head.getException.getType.resolveBinding().getName)
-      val consequent = toBlockStatement(clauses.head.getBody)
-      new IfStatement(test, consequent, convertCatchClauses(clauses.tail))
+      val consequent = fromBlock(clauses.head.getBody)
+      new IfStatement(test, consequent, fromCatchClauses(clauses.tail))
     } else null
   }
   
-  def toVariableDeclarators(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
-    fragments collect { case x: dom.VariableDeclarationFragment => toVariableDeclarator(x) }
+  def fromFragments(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) = 
+    fragments collect { case x: dom.VariableDeclarationFragment => fromVariableDeclarationFragment(x) }
   
-  def toForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
+  def fromForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
     val init = if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression]) {
       val vde = x.initializers.get(0).asInstanceOf[dom.VariableDeclarationExpression]
-      new VariableDeclaration(toVariableDeclarators(vde.fragments))
+      new VariableDeclaration(fromFragments(vde.fragments))
     } 
     else
       new SequenceExpression(toExpressions(x.initializers))
     val update = new SequenceExpression(toExpressions(x.updaters))
-    new ForStatement(init, toExpression(x.getExpression), update, toStatement(x.getBody))
+    new ForStatement(init, toExpression(x.getExpression), update, fromStatement(x.getBody))
   }
   
-  def toStatement(s: dom.Statement)(implicit td: dom.TypeDeclaration): Statement = s match {
+  def fromStatement(s: dom.Statement)(implicit td: dom.TypeDeclaration): Statement = s match {
     case x: dom.EmptyStatement =>
       new EmptyStatement()  
     case x: dom.ReturnStatement =>
       new ReturnStatement(toExpression(x.getExpression))
     case x: dom.IfStatement =>
-      new IfStatement(toExpression(x.getExpression),
-          toStatement(x.getThenStatement),
-          toStatement(x.getElseStatement))
+      new IfStatement(toExpression(x.getExpression),          fromStatement(x.getThenStatement),          fromStatement(x.getElseStatement))
     case x: dom.SwitchStatement =>
-      val cases = toSwitchCases(x.statements collect { case x: dom.Statement => x })
+      val cases = fromSwitchCases(x.statements collect { case x: dom.Statement => x })
       new SwitchStatement(toExpression(x.getExpression), cases)
     case x: dom.ContinueStatement =>
       new ContinueStatement()
     case x: dom.BreakStatement =>
       new BreakStatement()
     case x: dom.ForStatement =>
-      toForStatement(x)
+      fromForStatement(x)
     case x: dom.EnhancedForStatement =>
       val left = toExpression(x.getParameter.getInitializer)
       val right = toExpression(x.getExpression) 
-      val body = toStatement(x.getBody)
+      val body = fromStatement(x.getBody)
       new ForInStatement(left, right, body)
     case x: dom.WhileStatement =>
-      new WhileStatement(toExpression(x.getExpression), toStatement(x.getBody))
+      new WhileStatement(toExpression(x.getExpression), fromStatement(x.getBody))
     case x: dom.DoStatement =>
-      new DoWhileStatement(toStatement(x.getBody), toExpression(x.getExpression))
+      new DoWhileStatement(fromStatement(x.getBody), toExpression(x.getExpression))
     case x: dom.ConstructorInvocation =>
       val callee = new MemberExpression(new ThisExpression(), new Identifier("init_"), false)
       val call = new CallExpression(callee, toExpressions(x.arguments))
@@ -78,20 +79,20 @@ object StatementConverters {
       val callee = new MemberExpression(new Super(), new Identifier("init_"), false)
       val call = new CallExpression(callee, toExpressions(x.arguments))
       new ExpressionStatement(call)
-    case x: dom.Block => toBlockStatement(x)
+    case x: dom.Block => fromBlock(x)
     case x: dom.VariableDeclarationStatement =>
-      new VariableDeclaration(toVariableDeclarators(x.fragments))
+      new VariableDeclaration(fromFragments(x.fragments))
     case x: dom.ExpressionStatement =>
       new ExpressionStatement(toExpression(x.getExpression))
     case x: dom.TryStatement =>
-      val block = toBlockStatement(x.getBody)
-      val cases = new BlockStatement(List(convertCatchClauses(x.catchClauses collect { case x: dom.CatchClause => x})))
+      val block = fromBlock(x.getBody)
+      val cases = new BlockStatement(List(fromCatchClauses(x.catchClauses collect { case x: dom.CatchClause => x})))
       val handler = new CatchClause(new Identifier("e"), cases)
-      val finalizer = toBlockStatement(x.getFinally)
+      val finalizer = fromBlock(x.getFinally)
       new TryStatement(block, handler, finalizer)
     case x: dom.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case x: dom.SynchronizedStatement =>
-      toBlockStatement(x.getBody)
+      fromBlock(x.getBody)
     case x: dom.LabeledStatement =>
       new EmptyStatement()
     case null => null

@@ -121,27 +121,6 @@ object MethodDefinitionConverters {
     }
   }
   
-  def fromConstructorDeclaration(x: dom.MethodDeclaration, fieldInits: Iterable[Statement])(implicit td: dom.TypeDeclaration) = new MethodDefinition(
-    new Identifier("init_"),
-    new FunctionExpression(toIdentifiers(x.parameters),
-        new BlockStatement(fieldInits ++ toBlockStatement(x.getBody).body)),
-    "method",
-    false,
-    dom.Modifier.isStatic(x.getModifiers)
-  )
-  
-  def fromConstructorDeclarationOverloads(x: Iterable[dom.MethodDeclaration], fieldInits: Iterable[Statement])(implicit td: dom.TypeDeclaration) = {  
-    new MethodDefinition(new Identifier("init_"),
-      new FunctionExpression(
-        List(new RestElement(new Identifier("args"))),
-        new BlockStatement(fieldInits ++ parseAll(x).body)
-      ),
-      "method",
-      false,
-      dom.Modifier.isStatic(x.head.getModifiers)
-    )
-  }
-  
   /*def fromClassOrInterfaceDeclarationMember(x: dom.TypeDeclaration)(implicit td: dom.TypeDeclaration) : ExpressionStatement = 
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
         new ThisExpression(),

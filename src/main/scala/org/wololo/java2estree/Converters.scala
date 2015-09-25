@@ -15,16 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
-
-
 object Converters extends LazyLogging {
   def toProgram(cu : dom.CompilationUnit, path: String, filename: String) : Program = {
-    /*val packageImports = if (cu.getPackage != null)
-      importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
-    else 
-      List()*/
-    //val distinctImports = (builtinImports ++ packageImports ++ imports).groupBy(_.source.raw).mapValues(_.head).map(_._2)
-    val types = cu.types.toList collect { case x: dom.TypeDeclaration => toStatements(x) } flatten;
+    val types = cu.types.toList collect { case x: dom.TypeDeclaration => fromTypeDeclaration(x) } flatten;
     val classDeclaration = types.head.asInstanceOf[ClassDeclaration]
     
     val mapper = new ObjectMapper
@@ -32,7 +25,7 @@ object Converters extends LazyLogging {
     val tree = mapper.valueToTree[JsonNode](types)
     
     def countIdentifier(name: String) = 
-     tree.findParents("type").filter { x => x.get("type").asText() == "Identifier" && x.get("name").asText() == name }.size
+      tree.findParents("type").filter { x => x.get("type").asText() == "Identifier" && x.get("name").asText() == name }.size
         
     val packageImports = if (cu.getPackage != null)
       importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
@@ -44,8 +37,6 @@ object Converters extends LazyLogging {
     val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
     
     val imports = usedImports.collect { case (name, path) => defImport(name, path) }
-    
-    
     
     val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
     new Program("module", imports ++ exportedTypes)
@@ -61,8 +52,6 @@ object Converters extends LazyLogging {
   
   def toIdentifiers(parameters: java.util.List[_]) =
     parameters collect { case x: dom.SingleVariableDeclaration => toIdentifier(x) }
-  
-  //def toIdentifier(p: dom.SimpleName): Identifier = new Identifier(p.getIdentifier)
   
   def toVariableDeclarator(vd: dom.VariableDeclarationFragment)(implicit td: dom.TypeDeclaration) =
     new VariableDeclarator(new Identifier(vd.getName.getIdentifier), toExpression(vd.getInitializer))
@@ -82,7 +71,7 @@ object Converters extends LazyLogging {
         args
       )
     )
-    val superCall = new ExpressionStatement(new CallExpression(new Super(), args))
+    val superCall = new ExpressionStatement(new CallExpression(new Super(), List()))
     val statements = if (hasSuper) List(superCall, init) else List(init) 
     new MethodDefinition(
       new Identifier("constructor"),
@@ -143,29 +132,36 @@ object Converters extends LazyLogging {
     (name -> path)
   }
   
-  def toStatements(implicit td: dom.TypeDeclaration): Iterable[Node] = {
-    val fields = td.getFields
-    val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) }
-    val types = td.getTypes
-
-    val memberFields = fields map { fromFieldDeclarationMember(_) } flatten
-    val staticFields = fields map { fromFieldDeclarationStatic(_) } flatten
+  def createInitMethod(constructors: Array[dom.MethodDeclaration], hasSuperclass: Boolean)(implicit td: dom.TypeDeclaration): MethodDefinition = {
+    val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
     
-    // TODO: make simple constructor if there are no overloads
+    val (params, statements) = constructors.length match {
+      case x if x == 1 => (toIdentifiers(constructors.head.parameters), toBlockStatement(constructors.head.getBody).body)
+      case x if x > 1 => (List(new RestElement(new Identifier("args"))), parseAll(constructors).body)
+      case _ => (List(), List())
+    }
     
-    val constructors = methods filter { _.isConstructor() }
-    val initMethod = if (constructors.length == 1)
-      fromConstructorDeclaration(constructors.head, memberFields)
-    else if (constructors.length > 1) fromConstructorDeclarationOverloads(constructors, memberFields)
-    else new MethodDefinition(
+    val superInit = if (hasSuperclass) new ExpressionStatement(new CallExpression(new MemberExpression(new Super, new Identifier("init_"), false), List())) else null
+    val defaultStatements = if (hasSuperclass) superInit +: memberFields else memberFields
+    
+    new MethodDefinition(
       new Identifier("init_"),
-      new FunctionExpression(List(), new BlockStatement(List())),
+      new FunctionExpression(params, new BlockStatement(defaultStatements ++ statements)),
       "method",
       false,
       false
     )
-    
-    val constructor = createConstructor(td.getSuperclassType != null)
+  }
+  
+  def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Iterable[Node] = {
+    val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) }
+    val types = td.getTypes
+
+    val constructors = methods filter { _.isConstructor() }
+    val staticFields = td.getFields map { fromFieldDeclarationStatic(_) } flatten
+    val hasSuperclass = td.getSuperclassType != null
+    val initMethod = createInitMethod(constructors, hasSuperclass)
+    val constructor = createConstructor(hasSuperclass)
     
     val memberMethods = methods.filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
       case (name, methods) if methods.length == 1 =>
@@ -184,7 +180,7 @@ object Converters extends LazyLogging {
     // TODO: Member inner classes should probably defined as getters
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
     val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => 
-      val statements = toStatements(x).toList
+      val statements = fromTypeDeclaration(x).toList
       //val c = statements.head.asInstanceOf[ClassDeclaration]
       val a = new AssignmentExpression("=", new MemberExpression(new Identifier(td.getName.getIdentifier), new Identifier(x.getName.getIdentifier), false), new Identifier(x.getName.getIdentifier))
       statements :+ new ExpressionStatement(a)
@@ -192,7 +188,7 @@ object Converters extends LazyLogging {
     
     val body = new ClassBody(List(constructor, initMethod) ++ memberMethods ++ staticMethods)
     
-    val superClass = if (td.getSuperclassType != null) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
+    val superClass = if (hasSuperclass) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
     val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass)
     
     List(declaration) ++ staticInnerClasses ++ staticFields 

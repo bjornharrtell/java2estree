@@ -14,8 +14,8 @@ object importdeclaration {
   
   def createImport(name: String, path: String) = {
     new ImportDeclaration(
-        List(new ImportDefaultSpecifier(new Identifier(name))),
-          new Literal(s"'${path}'", s"'${path}'"))
+      List(new ImportDefaultSpecifier(new Identifier(name))),
+        new Literal(s"'${path}'", s"'${path}'"))
   }
   
   def builtinImports() : Map[String, String] = {

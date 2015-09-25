@@ -14,15 +14,29 @@ object method {
       fromBlock(x.getBody)
     )
   
+  def checkInterfaceExpression(x: MemberExpression, typeName: String) : LogicalExpression = {
+    val interfaces = new MemberExpression(x, new Identifier("interfaces_"), false)
+    
+    val indexOf = new MemberExpression(interfaces, new Identifier("indexOf"), false)
+    val indexOfCall = new CallExpression(indexOf, List(new Identifier(typeName)))
+    
+    val interfaceCheck = new BinaryExpression(">", indexOfCall, new Literal(-1, "-1"))
+    new LogicalExpression("&&", interfaces, interfaceCheck)
+  } 
+  
   def varToBinaryExpression(x: dom.SingleVariableDeclaration, i: Int) = {
     val identifier = new MemberExpression(new Identifier("args"), new Literal(i, i.toString), true)
-    val typeName = x.getType.resolveBinding().getName
+    val binding = x.getType.resolveBinding
+    val isInterface = binding.isInterface
+    val typeName = binding.getName
     if (x.getType.isArrayType())
       toInstanceOf(identifier, "Array")
     else if (typeName == "int")
       new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false)      
     else if (typeName == "double")
       new UnaryExpression("!", true, new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false))
+    else if (isInterface)
+      checkInterfaceExpression(identifier, typeName)
     else
       toInstanceOf(identifier, typeName)
   }
@@ -40,8 +54,6 @@ object method {
       false
     )
   }
-  
-  
   
   def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
     def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): Statement = {

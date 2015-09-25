@@ -84,12 +84,8 @@ object compilationunit {
   
   def createInitMethod(constructors: Array[dom.MethodDeclaration], hasSuperclass: Boolean)(implicit td: dom.TypeDeclaration): MethodDefinition = {
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
-    
-    val (params, statements) = constructors.length match {
-      case x if x == 1 => (fromParameters(constructors.head.parameters), fromBlock(constructors.head.getBody).body)
-      case x if x > 1 => (List(new RestElement(new Identifier("args"))), fromOverloadedMethodDeclarations(constructors).body)
-      case _ => (List(), List())
-    }
+
+    val (params, statements) = (List(new RestElement(new Identifier("args"))), fromOverloadedMethodDeclarations(constructors).body)
     
     val superInit = if (hasSuperclass) new ExpressionStatement(new CallExpression(new MemberExpression(new Super, new Identifier("init_"), false), List())) else null
     val defaultStatements = if (hasSuperclass) superInit +: memberFields else memberFields
@@ -136,7 +132,17 @@ object compilationunit {
       statements :+ new ExpressionStatement(a)
     } flatten
     
-    val body = new ClassBody(List(constructor, initMethod) ++ memberMethods ++ staticMethods)
+    val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getName) }
+    val returnInterfaces = new ReturnStatement(new ArrayExpression(interfaces))
+    val interfacesProperty = new MethodDefinition(
+      new Identifier("interfaces_"),
+      new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))),
+      "get",
+      false,
+      false
+    )
+    
+    val body = new ClassBody(List(constructor, initMethod, interfacesProperty) ++ memberMethods ++ staticMethods)
     
     val superClass = if (hasSuperclass) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
     val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass)

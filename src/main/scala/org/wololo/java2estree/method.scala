@@ -76,7 +76,6 @@ object method {
       }
       
       if (declarations.size > 1) {
-        val body = new BlockStatement(List(fromTypeOverloads(declarations)))  
         fromTypeOverloads(declarations)
       } else {
         val args = List(new SpreadElement(new Identifier("args")))

@@ -82,6 +82,17 @@ object expression {
   def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     expressions collect { case x: dom.Expression => toExpression(x)}
   
+  def create2DArrayExpression(x: Expression, y: Expression): CallExpression = {
+    val xCall = new CallExpression(new Identifier("Array"), List(x))
+    val yCall = new CallExpression(new Identifier("Array"), List(y))
+    val yArrow = new ArrowFunctionExpression(List(), yCall, false, true)
+    
+    val innerMember = new MemberExpression(xCall, new Identifier("fill"), false)
+    val innerCall = new CallExpression(innerMember, List())
+    val outerMember = new MemberExpression(innerCall, new Identifier("map"), false)
+    new CallExpression(outerMember, List(yArrow))
+  }
+  
   def toExpression(e: dom.Expression)(implicit td: dom.TypeDeclaration): Expression = e match {
     case nl: dom.NullLiteral => new Literal(null, "null")
     case x: dom.SimpleName => resolveSimpleName(x)
@@ -103,8 +114,14 @@ object expression {
     case x: dom.TypeLiteral =>
       new Identifier(x.getType.toString)
     case x: dom.ArrayCreation =>
-      val elements = if (x.getInitializer == null) List() else toExpressions(x.getInitializer.expressions)
-      new ArrayExpression(elements)
+      if (x.dimensions().length>1) {
+        val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
+        val c = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
+        create2DArrayExpression(r, c)
+      } else {
+        val elements = if (x.getInitializer == null) List() else toExpressions(x.getInitializer.expressions)
+        new ArrayExpression(elements)
+      }
     case x: dom.ArrayInitializer =>
       val elements = toExpressions(x.expressions)
       new ArrayExpression(elements)

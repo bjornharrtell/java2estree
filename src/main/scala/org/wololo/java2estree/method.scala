@@ -76,7 +76,12 @@ object method {
       }
       
       if (declarations.size > 1) {
-        fromTypeOverloads(declarations)
+        // TODO: very naive sort.. need to make sure subclass types are checked before their ancestors
+        var sorted = declarations.toList.sortWith { (md1, md2) => {
+          if (md1.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding().getSuperclass == null) false
+          else true
+        } }
+        fromTypeOverloads(sorted)
       } else {
         val args = List(new SpreadElement(new Identifier("args")))
         new ReturnStatement(new CallExpression(toArrowFunction(declarations.head), args))

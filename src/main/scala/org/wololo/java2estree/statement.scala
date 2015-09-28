@@ -70,14 +70,11 @@ object statement {
     case x: dom.DoStatement =>
       new DoWhileStatement(fromStatement(x.getBody), toExpression(x.getExpression))
     case x: dom.ConstructorInvocation =>
-      val callee = new MemberExpression(new ThisExpression(), new Identifier("init_"), false)
-      val call = new CallExpression(callee, toExpressions(x.arguments))
+      val overloadsCall = new MemberExpression(new Identifier("overloads"), new Identifier("call"), false)
+      val call = new CallExpression(overloadsCall, new ThisExpression +: toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.SuperConstructorInvocation =>
-      //val call = new CallExpression(new Super(), toExpressions(x.arguments))
-      //new ExpressionStatement(call)
-      val callee = new MemberExpression(new Super(), new Identifier("init_"), false)
-      val call = new CallExpression(callee, toExpressions(x.arguments))
+      val call = new CallExpression(new Super, toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.Block => fromBlock(x)
     case x: dom.VariableDeclarationStatement =>

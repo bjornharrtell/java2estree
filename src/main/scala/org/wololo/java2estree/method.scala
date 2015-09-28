@@ -57,7 +57,7 @@ object method {
     )
   }
   
-  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
+  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean = true)(implicit td: dom.TypeDeclaration) = {
     def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): Statement = {
       def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
         if (mds.size > 0) {
@@ -84,7 +84,8 @@ object method {
         fromTypeOverloads(sorted)
       } else {
         val args = List(new SpreadElement(new Identifier("args")))
-        new ReturnStatement(new CallExpression(toArrowFunction(declarations.head), args))
+        val call = new CallExpression(toArrowFunction(declarations.head), args)
+        if (returns) new ReturnStatement(call) else new ExpressionStatement(call)
       }
     }
     
@@ -93,11 +94,24 @@ object method {
       case (k, v) => 
         new SwitchCase(new Literal(k, k.toString), List(fromSameArgLength(v)))
     }
-    var switch = new SwitchStatement(
-      new MemberExpression(new Identifier("args"), new Identifier("length"), false),
-      cases
-    )
-    new BlockStatement(List(switch))
+    
+    if (cases.size == 0) {
+      List()
+    }
+    else {
+      var switch = new SwitchStatement(
+        new MemberExpression(new Identifier("args"), new Identifier("length"), false),
+        cases
+      )
+      val args = List(new RestElement(new Identifier("args")))
+      val overloads = new ArrowFunctionExpression(args, new BlockStatement(List(switch)), true, false)
+      val overloadsConst = new VariableDeclaration(
+        List(new VariableDeclarator(new Identifier("overloads"), overloads)), "const")
+      val overloadsApply = new MemberExpression(new Identifier("overloads"), new Identifier("apply"), false)
+      val overloadsApplyCall = new CallExpression(overloadsApply, List(new ThisExpression, new Identifier("args")))
+      val returnStatement = new ReturnStatement(overloadsApplyCall)
+      List(overloadsConst, returnStatement)
+    }    
   }
   
   def fromMethodDeclaration(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
@@ -115,7 +129,8 @@ object method {
       new Identifier(x.head.getName.getIdentifier),
       new FunctionExpression(
           List(new RestElement(new Identifier("args"))),
-          fromOverloadedMethodDeclarations(x)),
+          new BlockStatement(fromOverloadedMethodDeclarations(x))
+      ),
       "method",
       false,
       dom.Modifier.isStatic(x.head.getModifiers)

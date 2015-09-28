@@ -61,16 +61,9 @@ object compilationunit {
       new BlockStatement(
         bs.statements collect { case statement: dom.Statement => fromStatement(statement)})
   
-  def createConstructor(hasSuper: Boolean) = {
+  def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) = {
     val args = List(new SpreadElement(new Identifier("args")))
-    val init = new ExpressionStatement(
-      new CallExpression(
-        new MemberExpression(new ThisExpression(), new Identifier("init_"), false),
-        args
-      )
-    )
-    val superCall = new ExpressionStatement(new CallExpression(new Super(), List()))
-    val statements = if (hasSuper) List(superCall, init) else List(init) 
+    val statements = createConstructorBody(constructors, memberFields, hasSuper)
     new MethodDefinition(
       new Identifier("constructor"),
       new FunctionExpression(
@@ -82,22 +75,22 @@ object compilationunit {
     )
   }
   
-  def createInitMethod(constructors: Array[dom.MethodDeclaration], hasSuperclass: Boolean)(implicit td: dom.TypeDeclaration): MethodDefinition = {
+  def createConstructorBody(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] = {
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
-
-    val params = List(new RestElement(new Identifier("args")))
-    val statements = fromOverloadedMethodDeclarations(constructors).body
-    
-    val superInit = if (hasSuperclass) new ExpressionStatement(new CallExpression(new MemberExpression(new Super, new Identifier("init_"), false), List())) else null
-    val defaultStatements = if (hasSuperclass) superInit +: memberFields else memberFields
-    
-    new MethodDefinition(
-      new Identifier("init_"),
-      new FunctionExpression(params, new BlockStatement(defaultStatements ++ statements)),
-      "method",
-      false,
+    val memberInitArrow = new ArrowFunctionExpression(
+      List(),
+      new BlockStatement(memberFields),
       false
     )
+    val memberInitCall = new ExpressionStatement(new CallExpression(memberInitArrow, List()))
+
+    val params = List(new RestElement(new Identifier("args")))
+    val statements = fromOverloadedMethodDeclarations(constructors)
+    
+    val superCall = if (hasSuper) new ExpressionStatement(new CallExpression(new Super, List())) else null
+    val defaultStatements = if (hasSuper) List(superCall, memberInitCall) else List(memberInitCall)
+    
+    defaultStatements ++ statements
   }
   
   def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Iterable[Node] = {
@@ -105,10 +98,14 @@ object compilationunit {
     val types = td.getTypes
 
     val constructors = methods filter { _.isConstructor() }
+    val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
     val staticFields = td.getFields map { fromFieldDeclarationStatic(_) } flatten
     val hasSuperclass = td.getSuperclassType != null
-    val initMethod = createInitMethod(constructors, hasSuperclass)
-    val constructor = createConstructor(hasSuperclass)
+    
+    val constructor = if (constructors.size != 0 || memberFields.size != 0)
+      createConstructor(constructors, memberFields, hasSuperclass)
+    else
+      null
     
     val memberMethods = methods.filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
       case (name, methods) if methods.length == 1 =>
@@ -143,7 +140,8 @@ object compilationunit {
       false
     )
     
-    val body = new ClassBody(List(constructor, initMethod, interfacesProperty) ++ memberMethods ++ staticMethods)
+    val init = if (constructor == null) List(interfacesProperty) else List(constructor, interfacesProperty)
+    val body = new ClassBody(init ++ memberMethods ++ staticMethods)
     
     val superClass = if (hasSuperclass) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
     val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass)

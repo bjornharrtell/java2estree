@@ -149,10 +149,16 @@ object method {
     declaration.fragments collect { 
       case field: dom.VariableDeclarationFragment if dom.Modifier.isStatic(declaration.getModifiers) => {
         if (field.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of VariableDeclarationFragment when parsing " + field + " with parent " + field.getParent)    
-        new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-        new Identifier(field.resolveBinding.getDeclaringClass.getName),
-        new Identifier(field.getName.getIdentifier), false),
-        toExpression(field.getInitializer)))
+        new MethodDefinition(
+          new Identifier(field.getName.getIdentifier),
+          new FunctionExpression(
+              List(),
+              new BlockStatement(List(new ReturnStatement(toExpression(field.getInitializer))))
+          ),
+          "get",
+          false,
+          true
+        )
       }
     }
   }

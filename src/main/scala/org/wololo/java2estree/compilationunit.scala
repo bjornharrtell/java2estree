@@ -19,7 +19,8 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 object compilationunit {
   def fromCompilationUnit(cu : dom.CompilationUnit, path: String, filename: String): Program = {
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => fromTypeDeclaration(x) } flatten;
-    val classDeclaration = types.head.asInstanceOf[ClassDeclaration]
+    val classDeclaration = types.head
+    val staticClassDeclarations = types.tail
     
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
@@ -39,14 +40,9 @@ object compilationunit {
     
     val imports = usedImports.collect { case (name, path) => createImport(name, path) }
     
-    val exportedTypes = new ExportDefaultDeclaration(types.head) +: types.tail
+    val exportedTypes = new ExportDefaultDeclaration(classDeclaration) +: staticClassDeclarations
     new Program("module", imports ++ exportedTypes)
   }
-    
-  /*def classExpression(td : dom.TypeDeclaration) = {
-    val (body, statics) = toClassBody(td)
-    new ClassExpression(body)
-  }*/
   
   def fromSingleVariableDeclaration(x: dom.SingleVariableDeclaration): Identifier =
     new Identifier(x.getName.getIdentifier)
@@ -93,7 +89,7 @@ object compilationunit {
     defaultStatements ++ statements
   }
   
-  def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Iterable[Node] = {
+  def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Array[ClassDeclaration] = {
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) }
     val types = td.getTypes
 
@@ -113,7 +109,7 @@ object compilationunit {
       case (name, methods) if methods.length > 1 =>
         List(fromMethodDeclarationOverloads(methods))
     } flatten
-      
+    
     val staticMethods = methods.filter(m => !m.isConstructor() && Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
       case (name, methods) if methods.length == 1 =>
         List(fromMethodDeclaration(methods.head))
@@ -123,12 +119,19 @@ object compilationunit {
     
     // TODO: Member inner classes should probably defined as getters
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
-    val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => 
-      val statements = fromTypeDeclaration(x).toList
-      //val c = statements.head.asInstanceOf[ClassDeclaration]
-      val a = new AssignmentExpression("=", new MemberExpression(new Identifier(td.getName.getIdentifier), new Identifier(x.getName.getIdentifier), false), new Identifier(x.getName.getIdentifier))
-      statements :+ new ExpressionStatement(a)
-    } flatten
+    val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => fromTypeDeclaration(x) } flatten
+    val staticInnerClassProperties = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => 
+      new MethodDefinition(
+        new Identifier(x.getName.getIdentifier),
+        new FunctionExpression(
+            List(),
+            new BlockStatement(List(new ReturnStatement(new Identifier(x.getName.getIdentifier))))
+        ),
+        "get",
+        false,
+        true
+      )
+    }
     
     val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getName) }
     val returnInterfaces = new ReturnStatement(new ArrayExpression(interfaces))
@@ -141,11 +144,9 @@ object compilationunit {
     )
     
     val init = if (constructor == null) List(interfacesProperty) else List(constructor, interfacesProperty)
-    val body = new ClassBody(init ++ memberMethods ++ staticMethods)
+    val body = new ClassBody(init ++ staticFields ++ staticInnerClassProperties ++ staticMethods ++ memberMethods)
     
     val superClass = if (hasSuperclass) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
-    val declaration = new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass)
-    
-    List(declaration) ++ staticInnerClasses ++ staticFields 
+    new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass) +: staticInnerClasses
   }
 }

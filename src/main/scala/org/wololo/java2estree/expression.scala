@@ -146,6 +146,7 @@ object expression {
       // TODO: special case handle cast double/float -> int
       toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
+      //x.getAnonymousClassDeclaration.
       new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
       if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess when parsing " + x + " with parent " + x.getParent)

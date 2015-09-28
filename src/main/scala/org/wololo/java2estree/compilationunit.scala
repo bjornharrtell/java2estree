@@ -104,18 +104,12 @@ object compilationunit {
       null
     
     val memberMethods = methods.filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
-      case (name, methods) if methods.length == 1 =>
-        List(fromMethodDeclaration(methods.head))
-      case (name, methods) if methods.length > 1 =>
-        List(fromMethodDeclarationOverloads(methods))
-    } flatten
+      case (name, methods) => fromMethodDeclarations(methods)
+    } 
     
     val staticMethods = methods.filter(m => !m.isConstructor() && Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
-      case (name, methods) if methods.length == 1 =>
-        List(fromMethodDeclaration(methods.head))
-      case (name, methods) if methods.length > 1 =>
-        List(fromMethodDeclarationOverloads(methods))
-    } flatten
+      case (name, methods) => fromMethodDeclarations(methods)
+    } 
     
     // TODO: Member inner classes should probably defined as getters
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }

@@ -114,27 +114,28 @@ object method {
     }    
   }
   
-  def fromMethodDeclaration(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
-    new MethodDefinition(
-      new Identifier(x.getName.getIdentifier),
-      new FunctionExpression(fromParameters(x.parameters),
-          fromBlock(x.getBody)),
-      "method",
-      false,
-      dom.Modifier.isStatic(x.getModifiers)
-    )
-  
-  def fromMethodDeclarationOverloads(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) = {
-    new MethodDefinition(
-      new Identifier(x.head.getName.getIdentifier),
-      new FunctionExpression(
-          List(new RestElement(new Identifier("args"))),
-          new BlockStatement(fromOverloadedMethodDeclarations(x))
-      ),
-      "method",
-      false,
-      dom.Modifier.isStatic(x.head.getModifiers)
-    )
+  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : MethodDefinition = {
+    if (x.size == 1) {
+      new MethodDefinition(
+        new Identifier(x.head.getName.getIdentifier),
+        new FunctionExpression(fromParameters(x.head.parameters),
+            fromBlock(x.head.getBody)),
+        "method",
+        false,
+        dom.Modifier.isStatic(x.head.getModifiers)
+      )
+    } else {
+      new MethodDefinition(
+        new Identifier(x.head.getName.getIdentifier),
+        new FunctionExpression(
+            List(new RestElement(new Identifier("args"))),
+            new BlockStatement(fromOverloadedMethodDeclarations(x))
+        ),
+        "method",
+        false,
+        dom.Modifier.isStatic(x.head.getModifiers)
+      )
+    }
   }
   
   def fromFieldDeclarationMember(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = 

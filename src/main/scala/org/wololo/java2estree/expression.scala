@@ -5,6 +5,7 @@ import scala.collection.mutable.Buffer
 import org.wololo.estree._
 import org.eclipse.jdt.core.dom
 import com.typesafe.scalalogging.LazyLogging
+import method._
 
 object expression {
   def resolve(name: dom.Name) = if (name.isSimpleName())
@@ -146,8 +147,13 @@ object expression {
       // TODO: special case handle cast double/float -> int
       toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
-      //x.getAnonymousClassDeclaration.
-      new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
+      if (x.getAnonymousClassDeclaration != null) {
+        val body = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
+        val classBody = new ClassBody(body)
+        val classExpression = new ClassExpression(classBody, null)
+        new NewExpression(classExpression, List())
+      } else
+        new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
       if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess when parsing " + x + " with parent " + x.getParent)
       val t = if (dom.Modifier.isStatic(x.resolveFieldBinding.getModifiers))

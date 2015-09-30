@@ -152,7 +152,9 @@ object expression {
         val classBody = new ClassBody(body)
         val classExpression = new ClassExpression(classBody, null)
         new NewExpression(classExpression, List())
-      } else
+      } else if (x.getType.toString == "Integer" || x.getType.toString == "Double" || x.getType.toString == "Float" || x.getType.toString == "Short") {
+        toExpression(x.arguments.get(0).asInstanceOf[dom.Expression])
+      } else 
         new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
       if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess when parsing " + x + " with parent " + x.getParent)

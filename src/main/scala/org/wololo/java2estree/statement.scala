@@ -22,12 +22,14 @@ object statement {
       switchCases
   }
 
-  def fromCatchClauses(clauses: Iterable[dom.CatchClause])(implicit td: dom.TypeDeclaration): IfStatement = {
+  def fromCatchClauses(clauses: Iterable[dom.CatchClause], name: Identifier)(implicit td: dom.TypeDeclaration): Statement = {
     if (clauses.size > 0) {
-      val test = toInstanceOf(new Identifier("e"), clauses.head.getException.getType.resolveBinding().getName)
+      val test = toInstanceOf(name, clauses.head.getException.getType.resolveBinding().getName)
       val consequent = fromBlock(clauses.head.getBody)
-      new IfStatement(test, consequent, fromCatchClauses(clauses.tail))
-    } else null
+      new IfStatement(test, consequent, fromCatchClauses(clauses.tail, name))
+    } else {
+      new ThrowStatement(name)
+    }
   }
   
   def fromFragments(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) = 
@@ -83,10 +85,15 @@ object statement {
       new ExpressionStatement(toExpression(x.getExpression))
     case x: dom.TryStatement =>
       val block = fromBlock(x.getBody)
-      val cases = new BlockStatement(List(fromCatchClauses(x.catchClauses collect { case x: dom.CatchClause => x})))
-      val handler = new CatchClause(new Identifier("e"), cases)
       val finalizer = fromBlock(x.getFinally)
-      new TryStatement(block, handler, finalizer)
+      if (x.catchClauses.size()>0) {
+        val name = new Identifier(x.catchClauses().get(0).asInstanceOf[dom.CatchClause].getException.getName.getIdentifier)
+        val cases = new BlockStatement(List(fromCatchClauses(x.catchClauses collect { case x: dom.CatchClause => x}, name)))
+        val handler = new CatchClause(name, cases)
+        new TryStatement(block, handler, finalizer)
+      } else {
+        new TryStatement(block, null, finalizer)
+      }
     case x: dom.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case x: dom.SynchronizedStatement =>
       fromBlock(x.getBody)

@@ -36,7 +36,7 @@ object method {
     else if (typeName == "int")
       new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false)
     else if (typeName == "double")
-      new UnaryExpression("!", true, new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false))
+      new BinaryExpression("===", new UnaryExpression("typeof", true, identifier), new Literal("number", "\"number\""))
     else if (isInterface)
       checkInterfaceExpression(identifier, typeName)
     else

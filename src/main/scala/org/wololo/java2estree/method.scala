@@ -90,10 +90,9 @@ object method {
     }
     
     
-    val cases = x.groupBy { _.parameters.length }.collect {
-      case (k, v) => 
-        new SwitchCase(new Literal(k, k.toString), List(fromSameArgLength(v)))
-    }
+    val cases = x.groupBy({ _.parameters.length }).toList.sortBy(_._1).collect({
+      case (argsCount, methods) => new SwitchCase(new Literal(argsCount, argsCount.toString), List(fromSameArgLength(methods)))
+    })
     
     if (cases.size == 0) {
       List()

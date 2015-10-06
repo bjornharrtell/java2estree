@@ -115,14 +115,17 @@ object expression {
     case x: dom.TypeLiteral =>
       new Identifier(x.getType.toString)
     case x: dom.ArrayCreation =>
-      if (x.dimensions().length>1) {
+      if (x.dimensions().length == 1) {
         val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
-        val c = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
+        new NewExpression(new Identifier("Array"), List(r))
+      } else if (x.dimensions().length>1) {
+        val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
+        val c = toExpression(x.dimensions().get(1).asInstanceOf[dom.Expression])
         create2DArrayExpression(r, c)
-      } else {
-        val elements = if (x.getInitializer == null) List() else toExpressions(x.getInitializer.expressions)
-        new ArrayExpression(elements)
-      }
+      } else if (x.getInitializer != null)
+        new ArrayExpression(toExpressions(x.getInitializer.expressions))
+      else
+        new ArrayExpression(List())
     case x: dom.ArrayInitializer =>
       val elements = toExpressions(x.expressions)
       new ArrayExpression(elements)
@@ -152,17 +155,13 @@ object expression {
         val classBody = new ClassBody(body)
         val classExpression = new ClassExpression(classBody, null)
         new NewExpression(classExpression, List())
-      } else if (x.getType.toString == "Integer" || x.getType.toString == "Double" || x.getType.toString == "Float" || x.getType.toString == "Short") {
-        toExpression(x.arguments.get(0).asInstanceOf[dom.Expression])
       } else 
         new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
-      if (x.resolveFieldBinding == null) throw new RuntimeException("Cannot resolve binding of FieldAccess when parsing " + x + " with parent " + x.getParent)
-      val t = if (dom.Modifier.isStatic(x.resolveFieldBinding.getModifiers))
-        new Identifier(td.getName.getIdentifier)
-      else
-        new ThisExpression()
-      new MemberExpression(t, new Identifier(x.getName.getIdentifier), false)
+      x.getExpression match {
+        case m: dom.ThisExpression => new MemberExpression(new ThisExpression(), new Identifier(x.getName.getIdentifier), false)
+        case m: dom.Expression => new MemberExpression(toExpression(x.getExpression), new Identifier(x.getName.getIdentifier), false)
+      }
     case x: dom.MethodInvocation =>
       if (x.resolveMethodBinding == null)
         throw new RuntimeException("Cannot resolve binding of MethodInvocation when parsing " + x + " with parent " + x.getParent)

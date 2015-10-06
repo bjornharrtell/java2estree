@@ -137,8 +137,12 @@ object compilationunit {
       false
     )
     
+    val returnClassName = new ReturnStatement(new Identifier(td.getName.getIdentifier))
+    val getClassFunc = new FunctionExpression(List(), new BlockStatement(List(returnClassName)), false)
+    val getClass = new MethodDefinition(new Identifier("getClass"), getClassFunc, "method", false, false)
+    
     val init = if (constructor == null) List(interfacesProperty) else List(constructor, interfacesProperty)
-    val body = new ClassBody(init ++ staticFields ++ staticInnerClassProperties ++ staticMethods ++ memberMethods)
+    val body = new ClassBody(init ++ staticFields ++ staticInnerClassProperties ++ staticMethods ++ memberMethods :+ getClass)
     
     val superClass = if (hasSuperclass) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
     new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass) +: staticInnerClasses

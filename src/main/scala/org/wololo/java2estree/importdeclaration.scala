@@ -23,6 +23,7 @@ object importdeclaration {
       ("Comparable" -> "java/lang/Comparable"),
       ("Cloneable" -> "java/lang/Cloneable"),
       ("Character" -> "java/lang/Character"),
+      ("Integer" -> "java/lang/Integer"),
       ("Double" -> "java/lang/Double"),
       ("Exception" -> "java/lang/Exception"),
       ("RuntimeException" -> "java/lang/RuntimeException")

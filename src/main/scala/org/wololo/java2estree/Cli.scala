@@ -17,14 +17,14 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
 object Cli extends App with LazyLogging {
-  val path = new File(args(0))
-  val outpath = new File(args(1))
+  val root = Paths.get(args(0))
+  val outpath = Paths.get(args(1))
 
   val parser = ASTParser.newParser(AST.JLS8)
   
-  logger.info(s"Walking ${path}")
+  logger.info(s"Walking ${root}")
   
-  walk(path)
+  walk(root.toFile)
   
   def walk(dir: File) : Unit = {
     dir.listFiles().foreach { 
@@ -39,19 +39,19 @@ object Cli extends App with LazyLogging {
     parser.setResolveBindings(true)
     parser.setBindingsRecovery(true)
     parser.setStatementsRecovery(true)
-    parser.setEnvironment(null, Array(path.toString), null, true)
-    val baseName = file.getName.split('.')(0)
+    parser.setEnvironment(null, Array(root.toString), null, true)
+    val name = file.getName.split('.')(0)
     val doc = new Document(CharStreams.toString(new FileReader(file)))
     parser.setUnitName(file.getName)
     parser.setSource(doc.get.toCharArray)
     val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
-    val program = compilationunit.fromCompilationUnit(cu, path.toString, baseName)
+    val program = compilationunit.fromCompilationUnit(cu, root, file.toPath, name)
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     mapper.enable(SerializationFeature.INDENT_OUTPUT)
-    val fulloutpath = file.getParent.replaceAll(path.getPath, outpath.getPath)
+    val fulloutpath = file.getParent.replaceAll(root.toString, outpath.toString)
     new File(fulloutpath).mkdirs()
-    val os = Files.newOutputStream(Paths.get(fulloutpath, baseName + ".ast"), StandardOpenOption.CREATE)
+    val os = Files.newOutputStream(Paths.get(fulloutpath, name + ".ast"), StandardOpenOption.CREATE)
     mapper.writeValue(os, program)
   }
 }

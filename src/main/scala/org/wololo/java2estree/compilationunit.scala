@@ -15,9 +15,17 @@ import org.eclipse.jdt.core.dom.SuperConstructorInvocation
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import java.nio.file.Path
 
 object compilationunit {
-  def fromCompilationUnit(cu : dom.CompilationUnit, path: String, filename: String): Program = {
+  /**
+   * @param cu Java Eclipse AST CompilationUnit
+   * @param root Path to source root folder
+   * @param file Path to source file
+   * @param name File name without extension   
+   * @return ESTree Program node 
+   */
+  def fromCompilationUnit(cu : dom.CompilationUnit, root: Path, file: Path, name: String): Program = {
     val types = cu.types.toList collect { case x: dom.TypeDeclaration => fromTypeDeclaration(x) } flatten;
     val classDeclaration = types.head
     val staticClassDeclarations = types.tail
@@ -30,11 +38,13 @@ object compilationunit {
       tree.findParents("type").filter { x => x.get("type").asText() == "Identifier" && x.get("name").asText() == name }.size
         
     val packageImports = if (cu.getPackage != null)
-      importsFromName(cu.getPackage.getName.getFullyQualifiedName, path, filename)
+      importsFromName(cu.getPackage.getName.getFullyQualifiedName, root, name)
     else 
       Map[String, String]()
-          
-    val explicitImports = cu.imports.toList collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, path) };
+    
+    //println((path -> filename))
+      
+    val explicitImports = cu.imports.toList collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, root, file) };
     val distinctImports = (builtinImports ++ packageImports ++ explicitImports) - classDeclaration.id.name
     val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
     

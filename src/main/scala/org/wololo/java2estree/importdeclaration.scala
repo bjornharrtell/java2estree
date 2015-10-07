@@ -3,13 +3,29 @@ package org.wololo.java2estree
 import org.eclipse.jdt.core.dom
 import java.io.File
 import org.wololo.estree._
+import java.nio.file.Path
+import java.nio.file.Paths
 
 object importdeclaration {
-  def fromImportDeclaration(id: dom.ImportDeclaration, path: String): (String, String) = {
+  def makeRelative(path: Path, root: Path, file: Path): String = {
+    val folder = root.relativize(file.getParent)
+    val relPath = folder.relativize(path)
+    if (!relPath.toString().startsWith(".") && !relPath.toString().startsWith("/"))
+      "./" + relPath.toString
+    else
+      relPath.toString
+  }
+  
+  def fromImportDeclaration(id: dom.ImportDeclaration, root: Path, file: Path): (String, String) = {
+    
     val orgname = id.getName.getFullyQualifiedName
     val path = orgname.replace('.', '/')
     val name = orgname.split('.').last
-    (name -> path)
+    
+    if (path.startsWith("com"))
+      (name -> makeRelative(Paths.get(path), root, file))
+    else 
+      (name -> path)
   }
   
   def createImport(name: String, path: String) = {
@@ -30,7 +46,7 @@ object importdeclaration {
     )
   }
   
-  def importsFromName(name: String, path: String, ignore: String = null) : Map[String, String] = {
+  def importsFromName(name: String, root: Path, ignore: String = null) : Map[String, String] = {
     val subpath = name.replace('.', '/')
     val subname = name.split('.').last
  
@@ -41,14 +57,17 @@ object importdeclaration {
       return false
     }
     
-    val file = new File(path + '/' + subpath)
-    val files = file.listFiles
+    val file = Paths.get(root.toString, "//", subpath)
+    val files = file.toFile.listFiles
     if (files == null) return Map()
     
     val pairs = files.filter({ x => x.getName.split('.')(0) != ignore }).collect { case x if isJava(x) => {
       val name = x.getName.split('.')(0)
       val path = subpath + '/' + name
-      (name -> path)
+      if (path.startsWith("com"))
+        (name -> makeRelative(Paths.get(path), root, x.toPath))
+      else 
+        (name -> path)
     } }
     
     Map(pairs: _*)

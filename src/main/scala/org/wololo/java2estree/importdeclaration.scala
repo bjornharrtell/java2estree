@@ -36,6 +36,7 @@ object importdeclaration {
   
   def builtinImports() : Map[String, String] = {
     Map(
+      ("System" -> "java/lang/System"),
       ("Comparable" -> "java/lang/Comparable"),
       ("Cloneable" -> "java/lang/Cloneable"),
       ("Character" -> "java/lang/Character"),

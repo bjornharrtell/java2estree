@@ -146,9 +146,12 @@ object expression {
       toBinaryExpression(translateOp(x.getOperator.toString), exops)
     case x: dom.InstanceofExpression =>
       toInstanceOf(toExpression(x.getLeftOperand), x.getRightOperand.resolveBinding.getName)
-    case x: dom.CastExpression => 
-      // TODO: special case handle cast double/float -> int
-      toExpression(x.getExpression)
+    case x: dom.CastExpression =>
+      if (x.getType.toString == "int") {
+        val trunc = new MemberExpression(new Identifier("Math"), new Identifier("trunc"), false)
+        new CallExpression(trunc, List(toExpression(x.getExpression)))
+      } else
+        toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
       if (x.getAnonymousClassDeclaration != null) {
         val body = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
@@ -171,7 +174,9 @@ object expression {
         new Identifier(td.getName.getIdentifier)
       else
         toExpression(x.getExpression)
-      val callee = new MemberExpression(t, new Identifier(x.getName.getIdentifier), false)
+      // TODO: check for Math
+      val name = if (x.getName.getIdentifier == "rint") "round" else x.getName.getIdentifier
+      val callee = new MemberExpression(t, new Identifier(name), false)
       new CallExpression(callee, toExpressions(x.arguments))
     case x: dom.SuperFieldAccess =>
       new Literal("super", "super")

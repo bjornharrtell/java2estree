@@ -42,6 +42,7 @@ object importdeclaration {
       ("Character" -> "java/lang/Character"),
       ("Integer" -> "java/lang/Integer"),
       ("Double" -> "java/lang/Double"),
+      ("StringBuffer" -> "java/lang/StringBuffer"),
       ("Exception" -> "java/lang/Exception"),
       ("RuntimeException" -> "java/lang/RuntimeException")
     )

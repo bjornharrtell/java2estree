@@ -31,7 +31,7 @@ class ConstructorSpec extends FlatSpec with Matchers {
         };
         return overloads.apply(this, args);
       }
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       getClass() {
@@ -68,7 +68,7 @@ class ConstructorSpec extends FlatSpec with Matchers {
         };
         return overloads.apply(this, args);
       }
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       getClass() {
@@ -110,7 +110,7 @@ class ConstructorSpec extends FlatSpec with Matchers {
         };
         return overloads.apply(this, args);
       }
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       getClass() {

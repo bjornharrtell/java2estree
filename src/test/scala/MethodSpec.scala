@@ -19,7 +19,7 @@ class MethodSpec extends FlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       add() {}
@@ -45,7 +45,7 @@ class MethodSpec extends FlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       add(x, y) {}
@@ -78,7 +78,7 @@ class MethodSpec extends FlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       add(...args) {

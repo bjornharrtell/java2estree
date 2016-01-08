@@ -21,7 +21,7 @@ class InfixSpec extends FlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       calc() {
@@ -51,7 +51,7 @@ class InfixSpec extends FlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       calc() {
@@ -81,7 +81,7 @@ class InfixSpec extends FlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get _interfaces() {
+      get interfaces_() {
         return [];
       }
       calc() {

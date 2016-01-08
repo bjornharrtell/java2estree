@@ -65,26 +65,28 @@ object expression {
       token.substring(0, token.length-1)
     else token
 
+  def truncCheck(op: String, left: dom.Expression, right: dom.Expression) : Boolean =
+    left.resolveTypeBinding().getName == "int" &&
+    right.resolveTypeBinding().getName == "int" &&
+    op == "/"
+  
+  def trunc(e: Expression) = {
+    val trunc = new MemberExpression(new Identifier("Math"), new Identifier("trunc"), false)
+    new CallExpression(trunc, List(e))
+  }
+    
   /**
    * Convert op and expressions from a dom.InfixExpression and truncate if needed.
    */
-  def toBinaryExpression(op: String, l: Buffer[dom.Expression])(implicit td: dom.TypeDeclaration) : Expression = {
-    val binaryExpression = if (l.length > 2) 
-      new BinaryExpression(op, toExpression(l.head), toBinaryExpression(op, l.tail))
-    else
-      new BinaryExpression(op, toExpression(l.head), toExpression(l.get(1)))
-
-    // TODO: Lesser types also affected but not considered yet.
-    val needTrunc =
-      l.head.resolveTypeBinding().getName == "int" &&
-      l.get(1).resolveTypeBinding().getName == "int" &&
-      op == "/"
-
-    if (needTrunc) {
-      val trunc = new MemberExpression(new Identifier("Math"), new Identifier("trunc"), false)
-      new CallExpression(trunc, List(binaryExpression))
-    } else
-      binaryExpression
+  def toBinaryExpression(op: String, left: Expression, rest: Buffer[dom.Expression], shouldTrunc: Boolean)(implicit td: dom.TypeDeclaration) : Expression = {
+    def be = new BinaryExpression(op, left, toExpression(rest.get(0)))
+    rest.length match {
+      case 0 => left
+      case 1 if shouldTrunc => trunc(be)
+      case 1 if !shouldTrunc => be
+      case 2 if shouldTrunc => toBinaryExpression(op, be, rest.tail, shouldTrunc)
+      case 2 if !shouldTrunc => toBinaryExpression(op, trunc(be), rest.tail, shouldTrunc)
+    }
   }
   
   def toInstanceOf(e: Expression, typeName: String) = {
@@ -157,9 +159,18 @@ object expression {
       val consequent = toExpression(x.getThenExpression)
       new ConditionalExpression(test, alternate, consequent)
     case x: dom.InfixExpression =>
-      val ops = Buffer(x.getLeftOperand, x.getRightOperand)
-      val exops = ops ++ x.extendedOperands collect { case x: dom.Expression => x }
-      toBinaryExpression(translateOp(x.getOperator.toString), exops)
+      val op = translateOp(x.getOperator.toString)
+      val left = x.getLeftOperand
+      val right = x.getRightOperand
+      val shouldTrunc = left.resolveTypeBinding().getName == "int" &&
+        right.resolveTypeBinding().getName == "int" &&
+        op == "/"
+      val e = new BinaryExpression(op, toExpression(left), toExpression(right))
+      val initial = if (shouldTrunc) trunc(e) else e
+      if (x.extendedOperands.size() > 0)
+        toBinaryExpression(op, initial, x.extendedOperands collect { case x: dom.Expression => x }, shouldTrunc)
+      else 
+        initial
     case x: dom.InstanceofExpression =>
       toInstanceOf(toExpression(x.getLeftOperand), x.getRightOperand.resolveBinding.getName)
     case x: dom.CastExpression =>

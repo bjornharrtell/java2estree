@@ -80,13 +80,13 @@ object expression {
    */
   def toBinaryExpression(op: String, left: Expression, rest: Buffer[dom.Expression], shouldTrunc: Boolean)(implicit td: dom.TypeDeclaration) : Expression = {
     def be = new BinaryExpression(op, left, toExpression(rest.get(0)))
-    rest.length match {
-      case 0 => left
-      case 1 if shouldTrunc => trunc(be)
-      case 1 if !shouldTrunc => be
-      case 2 if shouldTrunc => toBinaryExpression(op, be, rest.tail, shouldTrunc)
-      case 2 if !shouldTrunc => toBinaryExpression(op, trunc(be), rest.tail, shouldTrunc)
-    }
+    if (rest.length == 0)
+      left
+    else if (rest.length == 1)
+      if (shouldTrunc) trunc(be) else be
+    else
+      if (shouldTrunc) toBinaryExpression(op, be, rest.tail, shouldTrunc)
+      else toBinaryExpression(op, trunc(be), rest.tail, shouldTrunc)
   }
   
   def toInstanceOf(e: Expression, typeName: String) = {

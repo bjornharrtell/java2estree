@@ -5,7 +5,8 @@ cache:
   - node_modules
   - $HOME/.m2
 install:
-  - nvm use 4.2
+  - . $HOME/.nvm/nvm.sh
+  - nvm use 4.1
   - nvm install
   - npm install
 

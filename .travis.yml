@@ -1,4 +1,6 @@
 language: java
+node_js:
+  - "4.1"
 sudo: false
 cache:
   directories:

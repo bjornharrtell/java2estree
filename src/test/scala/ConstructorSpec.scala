@@ -18,12 +18,25 @@ class ConstructorSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    import Double from 'java/lang/Double';
     export default class Test {
       constructor(...args) {
-        this.init_(...args);
+        (() => {})();
+        const overloads = (...args) => {
+          switch (args.length) {
+            case 0:
+              return ((...args) => {
+                let [] = args;
+              })(...args);
+          }
+        };
+        return overloads.apply(this, args);
       }
-      init_() {}
+      get _interfaces() {
+        return [];
+      }
+      getClass() {
+        return Test;
+      }
     }
 
 """
@@ -42,12 +55,25 @@ class ConstructorSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    import Double from 'java/lang/Double';
     export default class Test {
       constructor(...args) {
-        this.init_(...args);
+        (() => {})();
+        const overloads = (...args) => {
+          switch (args.length) {
+            case 2:
+              return ((...args) => {
+                let [x, y] = args;
+              })(...args);
+          }
+        };
+        return overloads.apply(this, args);
       }
-      init_(x, y) {}
+      get _interfaces() {
+        return [];
+      }
+      getClass() {
+        return Test;
+      }
     }
 
 """
@@ -68,14 +94,27 @@ class ConstructorSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    import Double from 'java/lang/Double';
     export default class Test {
       constructor(...args) {
-        this.init_(...args);
+        (() => {
+          this.x = null;
+        })();
+        const overloads = (...args) => {
+          switch (args.length) {
+            case 1:
+              return ((...args) => {
+                let [x] = args;
+                this.x = x;
+              })(...args);
+          }
+        };
+        return overloads.apply(this, args);
       }
-      init_(x) {
-        this.x = null;
-        this.x = x;
+      get _interfaces() {
+        return [];
+      }
+      getClass() {
+        return Test;
       }
     }
 

@@ -17,12 +17,13 @@ class ClassSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    import Double from 'java/lang/Double';
     export default class Test {
-      constructor(...args) {
-        this.init_(...args);
+      get _interfaces() {
+        return [];
       }
-      init_() {}
+      getClass() {
+        return Test;
+      }
     }
 
 """
@@ -40,13 +41,13 @@ class ClassSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    import Double from 'java/lang/Double';
     export default class Test extends Object {
-      constructor(...args) {
-        super(...args);
-        this.init_(...args);
+      get _interfaces() {
+        return [];
       }
-      init_() {}
+      getClass() {
+        return Test;
+      }
     }
 
 """

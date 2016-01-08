@@ -18,13 +18,14 @@ class MethodSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    import Double from 'java/lang/Double';
     export default class Test {
-      constructor(...args) {
-        this.init_(...args);
+      get _interfaces() {
+        return [];
       }
-      init_() {}
       add() {}
+      getClass() {
+        return Test;
+      }
     }
 
 """
@@ -43,13 +44,14 @@ class MethodSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    import Double from 'java/lang/Double';
     export default class Test {
-      constructor(...args) {
-        this.init_(...args);
+      get _interfaces() {
+        return [];
       }
-      init_() {}
       add(x, y) {}
+      getClass() {
+        return Test;
+      }
     }
 
 """
@@ -75,30 +77,34 @@ class MethodSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    import Double from 'java/lang/Double';
     export default class Test {
-      constructor(...args) {
-        this.init_(...args);
+      get _interfaces() {
+        return [];
       }
-      init_() {}
       add(...args) {
-        switch (args.length) {
-          case 2:
-            return ((...args) => {
-              let [x, y] = args;
-              return x + y;
-            })(...args);
-          case 1:
-            return ((...args) => {
-              let [x] = args;
-              return x;
-            })(...args);
-          case 0:
-            return ((...args) => {
-              let [] = args;
-              return null;
-            })(...args);
-        }
+        const overloads = (...args) => {
+          switch (args.length) {
+            case 0:
+              return ((...args) => {
+                let [] = args;
+                return null;
+              })(...args);
+            case 1:
+              return ((...args) => {
+                let [x] = args;
+                return x;
+              })(...args);
+            case 2:
+              return ((...args) => {
+                let [x, y] = args;
+                return x + y;
+              })(...args);
+          }
+        };
+        return overloads.apply(this, args);
+      }
+      getClass() {
+        return Test;
       }
     }
 

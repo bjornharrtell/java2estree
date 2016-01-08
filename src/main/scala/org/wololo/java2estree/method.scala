@@ -15,7 +15,7 @@ object method {
     )
   
   def checkInterfaceExpression(x: MemberExpression, typeName: String) : LogicalExpression = {
-    val interfaces = new MemberExpression(x, new Identifier("interfaces_"), false)
+    val interfaces = new MemberExpression(x, new Identifier("_interfaces"), false)
     
     val indexOf = new MemberExpression(interfaces, new Identifier("indexOf"), false)
     val indexOfCall = new CallExpression(indexOf, List(new Identifier(typeName)))

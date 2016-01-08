@@ -140,7 +140,7 @@ object compilationunit {
     val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getName) }
     val returnInterfaces = new ReturnStatement(new ArrayExpression(interfaces))
     val interfacesProperty = new MethodDefinition(
-      new Identifier("_interfaces"),
+      new Identifier("interfaces_"),
       new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))),
       "get",
       false,

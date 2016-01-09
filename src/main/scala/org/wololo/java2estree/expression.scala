@@ -85,8 +85,8 @@ object expression {
     else if (rest.length == 1)
       if (shouldTrunc) trunc(be) else be
     else
-      if (shouldTrunc) toBinaryExpression(op, be, rest.tail, shouldTrunc)
-      else toBinaryExpression(op, trunc(be), rest.tail, shouldTrunc)
+      if (shouldTrunc) toBinaryExpression(op, trunc(be), rest.tail, shouldTrunc)
+      else toBinaryExpression(op, be, rest.tail, shouldTrunc)
   }
   
   def toInstanceOf(e: Expression, typeName: String) = {

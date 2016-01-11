@@ -90,7 +90,7 @@ object expression {
   }
   
   def toInstanceOf(e: Expression, typeName: String) = {
-    if (typeName == "String") {
+    if (typeName == "String" || typeName == "char") {
       val typeof = new UnaryExpression("typeof", true, e)
       new BinaryExpression("===", typeof, new Literal("string", "\"string\""))
     } else {
@@ -195,16 +195,19 @@ object expression {
     case x: dom.MethodInvocation =>
       if (x.resolveMethodBinding == null)
         throw new RuntimeException("Cannot resolve binding of MethodInvocation when parsing " + x + " with parent " + x.getParent)
-      val t = if (x.getExpression == null && !dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers)) 
+      val binding = x.resolveMethodBinding
+      val t = if (x.getExpression == null && !dom.Modifier.isStatic(binding.getModifiers)) 
         new ThisExpression()
-      else if (x.getExpression == null && dom.Modifier.isStatic(x.resolveMethodBinding.getModifiers))
+      else if (x.getExpression == null && dom.Modifier.isStatic(binding.getModifiers))
         new Identifier(td.getName.getIdentifier)
       else
         toExpression(x.getExpression)
-      // TODO: check for Math
-      val name = if (x.getName.getIdentifier == "rint") "round" else x.getName.getIdentifier
+      val declaringClassName = binding.getDeclaringClass.getName
+      val identifier = x.getName.getIdentifier
+      val name = if (declaringClassName == "Math" && identifier == "rint") "round" else identifier
       val callee = new MemberExpression(t, new Identifier(name), false)
-      new CallExpression(callee, toExpressions(x.arguments))
+      if (binding.getDeclaringClass.getName == "String" && name == "length") callee
+      else new CallExpression(callee, toExpressions(x.arguments))
     case x: dom.SuperFieldAccess =>
       new Literal("super", "super")
     case x: dom.SuperMethodInvocation =>

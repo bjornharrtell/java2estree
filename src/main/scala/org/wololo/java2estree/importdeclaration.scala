@@ -44,7 +44,8 @@ object importdeclaration {
       ("Double" -> "java/lang/Double"),
       ("StringBuffer" -> "java/lang/StringBuffer"),
       ("Exception" -> "java/lang/Exception"),
-      ("RuntimeException" -> "java/lang/RuntimeException")
+      ("RuntimeException" -> "java/lang/RuntimeException"),
+      ("IllegalArgumentException" -> "java/lang/IllegalArgumentException")
     )
   }
   

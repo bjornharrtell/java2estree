@@ -36,13 +36,16 @@ object statement {
     fragments collect { case x: dom.VariableDeclarationFragment => fromVariableDeclarationFragment(x) }
   
   def fromForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
-    val init = if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression]) {
+    val init = if (x.initializers.size == 0) null 
+    else if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression]) {
       val vde = x.initializers.get(0).asInstanceOf[dom.VariableDeclarationExpression]
       new VariableDeclaration(fromFragments(vde.fragments))
     } 
     else
       new SequenceExpression(toExpressions(x.initializers))
-    val update = new SequenceExpression(toExpressions(x.updaters))
+    val update: Expression = if (x.updaters.size() == 0) null
+    else if (x.updaters.size() == 1) toExpressions(x.updaters).head
+    else new SequenceExpression(toExpressions(x.updaters))
     new ForStatement(init, toExpression(x.getExpression), update, fromStatement(x.getBody))
   }
   
@@ -52,7 +55,9 @@ object statement {
     case x: dom.ReturnStatement =>
       new ReturnStatement(toExpression(x.getExpression))
     case x: dom.IfStatement =>
-      new IfStatement(toExpression(x.getExpression),          fromStatement(x.getThenStatement),          fromStatement(x.getElseStatement))
+      val consequent = fromStatement(x.getThenStatement)
+      val alternate = fromStatement(x.getElseStatement)
+      new IfStatement(toExpression(x.getExpression), consequent, alternate)
     case x: dom.SwitchStatement =>
       val cases = fromSwitchCases(x.statements collect { case x: dom.Statement => x })
       new SwitchStatement(toExpression(x.getExpression), cases)

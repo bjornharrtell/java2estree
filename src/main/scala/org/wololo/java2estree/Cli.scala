@@ -46,6 +46,7 @@ object Cli extends App with LazyLogging {
     parser.setSource(doc.get.toCharArray)
     val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
     val program = compilationunit.fromCompilationUnit(cu, root, file.toPath, name)
+    if (program == null) return
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     mapper.enable(SerializationFeature.INDENT_OUTPUT)

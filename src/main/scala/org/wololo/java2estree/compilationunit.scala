@@ -18,6 +18,13 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import java.nio.file.Path
 
 object compilationunit {
+
+  def isDeprecated(javadoc: dom.Javadoc) : Boolean = {
+    if (javadoc != null && javadoc.tags != null)
+      javadoc.tags.toList collect { case x: dom.TagElement => x } exists { x => x.getTagName == "@deprecated" }
+    else false
+  }
+
   /**
    * @param cu Java Eclipse AST CompilationUnit
    * @param root Path to source root folder
@@ -26,7 +33,10 @@ object compilationunit {
    * @return ESTree Program node 
    */
   def fromCompilationUnit(cu : dom.CompilationUnit, root: Path, file: Path, name: String): Program = {
-    val types = cu.types.toList collect { case x: dom.TypeDeclaration => fromTypeDeclaration(x) } flatten;
+    val types = cu.types.toList collect { case x: dom.TypeDeclaration if !isDeprecated(x.getJavadoc) => fromTypeDeclaration(x) } flatten
+
+    if (types.length == 0) return null
+
     val classDeclaration = types.head
     val staticClassDeclarations = types.tail
     
@@ -44,7 +54,7 @@ object compilationunit {
     
     //println((path -> filename))
       
-    val explicitImports = cu.imports.toList collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, root, file) };
+    val explicitImports = cu.imports.toList collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, root, file) }
     val distinctImports = (builtinImports ++ packageImports ++ explicitImports) - classDeclaration.id.name
     val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
     
@@ -100,10 +110,10 @@ object compilationunit {
   }
   
   def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Array[ClassDeclaration] = {
-    val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) }
+    val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) || isDeprecated(x.getJavadoc) }
     val types = td.getTypes
 
-    val constructors = methods filter { _.isConstructor() }
+    val constructors = methods filter { m => m.isConstructor() }
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
     val staticFields = td.getFields map { fromFieldDeclarationStatic(_) } flatten
     val hasSuperclass = td.getSuperclassType != null
@@ -113,17 +123,23 @@ object compilationunit {
     else
       null
     
-    val memberMethods = methods.filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
+    val memberMethods = methods
+        .filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers))
+        .groupBy(_.getName.getIdentifier).map {
       case (name, methods) => fromMethodDeclarations(methods)
     } 
     
-    val staticMethods = methods.filter(m => !m.isConstructor() && Modifier.isStatic(m.getModifiers)).groupBy(_.getName.getIdentifier).map {
+    val staticMethods = methods
+        .filter(m => !m.isConstructor() && Modifier.isStatic(m.getModifiers))
+        .groupBy(_.getName.getIdentifier).map {
       case (name, methods) => fromMethodDeclarations(methods)
     } 
     
     // TODO: Member inner classes should probably defined as getters
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
-    val staticInnerClasses = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => fromTypeDeclaration(x) } flatten
+    val staticInnerClasses = types
+        .filter(x => Modifier.isStatic(x.getModifiers))
+        .map { x => fromTypeDeclaration(x) } flatten
     val staticInnerClassProperties = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => 
       new MethodDefinition(
         new Identifier(x.getName.getIdentifier),

@@ -125,7 +125,7 @@ object method {
     val test = new BinaryExpression("===", argsLength, new Literal(m.parameters.size(), m.parameters.size().toString()))
     val consequent = new BlockStatement(argsToLet(m) +: fromBlock2(m.getBody).toList)
     val call = new CallExpression(new Identifier(m.getName.getIdentifier), List(new SpreadElement(new Identifier("args"))))
-    val alternate = new ExpressionStatement(new MemberExpression(new Super(), call, false))
+    val alternate = new ReturnStatement(new MemberExpression(new Super(), call, false))
     new IfStatement(test, consequent, alternate)
   }
   

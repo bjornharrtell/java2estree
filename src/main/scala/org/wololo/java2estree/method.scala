@@ -129,21 +129,32 @@ object method {
     new IfStatement(test, consequent, alternate)
   }
   
+  /**
+   * Check superClass for overloads that are not overridden by m
+   */
+  def hasSuperOverloads(m: dom.MethodDeclaration, superClass: dom.ITypeBinding) : Boolean = {
+    val binding = m.resolveBinding
+    if (superClass != null)
+      if (superClass.getDeclaredMethods.exists(x => x.getName == m.getName.getIdentifier && !binding.overrides(x)))
+        true
+      else
+        hasSuperOverloads(m, superClass.getSuperclass)
+    else false
+  }
+
   def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : MethodDefinition = {
     // check if single method has non overrided overload
     val binding = x.head.resolveBinding
     val superClass = binding.getDeclaringClass.getSuperclass
-    val hasSuperOverloads = if (superClass != null)
-      superClass.getDeclaredMethods.exists(m => m.getName == x.head.getName.getIdentifier && !binding.overrides(m))
-    else false
+    val superOverloads = hasSuperOverloads(x.head, superClass)
     
     if (x.size == 1) {
-      val params = if (hasSuperOverloads)
+      val params = if (superOverloads)
         List(new RestElement(new Identifier("args")))
       else
         fromParameters(x.head.parameters)
         
-      val block = if (hasSuperOverloads)
+      val block = if (superOverloads)
         new BlockStatement(List(specificMethodConditional(x.head)))
       else
         fromBlock(x.head.getBody)

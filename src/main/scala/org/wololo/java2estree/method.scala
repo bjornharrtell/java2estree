@@ -43,16 +43,22 @@ object method {
       toInstanceOf(identifier, typeName)
   }
   
-  def toArrowFunction(md: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = {
-    val statements = fromBlock(md.getBody).body.toList
+  /**
+   * Create destructuring statement from args and method params  
+   */
+  def argsToLet(md: dom.MethodDeclaration) : VariableDeclaration = {
     val patterns = fromParameters(md.parameters)
-    val let = new VariableDeclaration(
+    new VariableDeclaration(
       List(new VariableDeclarator(new ArrayPattern(patterns), new Identifier("args"))),
       "let"
     )
+  }
+  
+  def toArrowFunction(md: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = {
+    val statements = fromBlock(md.getBody).body.toList
     new ArrowFunctionExpression(
       List(new RestElement(new Identifier("args"))),
-      new BlockStatement(let +: statements),
+      new BlockStatement(argsToLet(md) +: statements),
       false
     )
   }
@@ -62,6 +68,7 @@ object method {
       def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
         if (mds.size > 0) {
           val es = mds.head.parameters.collect({ case x: dom.SingleVariableDeclaration => x }).zipWithIndex map { case (x, i) => varToBinaryExpression(x, i) }
+          // TODO: make this recursive
           val test = if (es.size == 3) 
             new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1)))
           else if (es.size == 2) 
@@ -113,12 +120,37 @@ object method {
     }    
   }
   
+  def specificMethodConditional(m: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration): IfStatement = {
+    val argsLength = new MemberExpression(new Identifier("args"), new Identifier("length"), false)
+    val test = new BinaryExpression("===", argsLength, new Literal(m.parameters.size(), m.parameters.size().toString()))
+    val consequent = new BlockStatement(argsToLet(m) +: fromBlock2(m.getBody).toList)
+    val call = new CallExpression(new Identifier(m.getName.getIdentifier), List(new SpreadElement(new Identifier("args"))))
+    val alternate = new ExpressionStatement(new MemberExpression(new Super(), call, false))
+    new IfStatement(test, consequent, alternate)
+  }
+  
   def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : MethodDefinition = {
+    // check if single method has non overrided overload
+    val binding = x.head.resolveBinding
+    val superClass = binding.getDeclaringClass.getSuperclass
+    val hasSuperOverloads = if (superClass != null)
+      superClass.getDeclaredMethods.exists(m => m.getName == x.head.getName.getIdentifier && !binding.overrides(m))
+    else false
+    
     if (x.size == 1) {
+      val params = if (hasSuperOverloads)
+        List(new RestElement(new Identifier("args")))
+      else
+        fromParameters(x.head.parameters)
+        
+      val block = if (hasSuperOverloads)
+        new BlockStatement(List(specificMethodConditional(x.head)))
+      else
+        fromBlock(x.head.getBody)
+
       new MethodDefinition(
         new Identifier(x.head.getName.getIdentifier),
-        new FunctionExpression(fromParameters(x.head.parameters),
-            fromBlock(x.head.getBody)),
+        new FunctionExpression(params, block),
         "method",
         false,
         dom.Modifier.isStatic(x.head.getModifiers)
@@ -162,16 +194,4 @@ object method {
       }
     }
   }
-  
-  /*def fromClassOrInterfaceDeclarationMember(x: dom.TypeDeclaration)(implicit td: dom.TypeDeclaration) : ExpressionStatement = 
-        new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-        new ThisExpression(),
-        new Identifier(x.getName.getIdentifier), false),
-        classExpression(x)))
-    
-  def fromClassOrInterfaceDeclarationStatic(x: dom.TypeDeclaration)(implicit td: dom.TypeDeclaration) : ExpressionStatement = 
-        new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-        new Identifier(td.getName.getIdentifier),
-        new Identifier(x.getName.getIdentifier), false),
-        classExpression(x)))*/
 }

@@ -70,6 +70,9 @@ object compilationunit {
   def fromParameters(parameters: java.util.List[_]) = 
     parameters collect { case x: dom.SingleVariableDeclaration => fromSingleVariableDeclaration(x) }
   
+  def fromBlock2(bs: dom.Block)(implicit td: dom.TypeDeclaration): Iterable[Statement] =
+    bs.statements collect { case statement: dom.Statement => fromStatement(statement)}
+  
   def fromBlock(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement =
     if (bs == null)
       new BlockStatement(List())
@@ -122,11 +125,13 @@ object compilationunit {
       createConstructor(constructors, memberFields, hasSuperclass)
     else
       null
-    
+      
     val memberMethods = methods
         .filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers))
         .groupBy(_.getName.getIdentifier).map {
-      case (name, methods) => fromMethodDeclarations(methods)
+      case (name, methods) => {
+        fromMethodDeclarations(methods)
+      }
     } 
     
     val staticMethods = methods

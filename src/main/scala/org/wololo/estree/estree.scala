@@ -94,7 +94,7 @@ class FunctionDeclaration (
 
 class VariableDeclaration (
   val declarations: Iterable[VariableDeclarator],
-  val kind: String = "var"
+  val kind: String
 ) extends Declaration
 
 class VariableDeclarator (

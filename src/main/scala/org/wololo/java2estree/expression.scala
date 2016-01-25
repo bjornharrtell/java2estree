@@ -204,6 +204,15 @@ object expression {
         toExpression(x.getExpression)
       val declaringClassName = binding.getDeclaringClass.getName
       val identifier = x.getName.getIdentifier
+      
+      // NOTE: special case for String.equals
+      if (declaringClassName == "String" && identifier == "equals") {
+        // TODO: assumed name of callee
+        val left = new MemberExpression(new ThisExpression(), new Identifier("name"), false)
+        val right = toExpressions(x.arguments).head
+        return new BinaryExpression("===", left, right)
+      }
+      
       val name = if (declaringClassName == "Math" && identifier == "rint") "round" else identifier
       val callee = new MemberExpression(t, new Identifier(name), false)
       if (binding.getDeclaringClass.getName == "String" && name == "length") callee

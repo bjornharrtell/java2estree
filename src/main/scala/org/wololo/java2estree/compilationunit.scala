@@ -37,7 +37,7 @@ object compilationunit {
 
     if (types.length == 0) return null
 
-    val classDeclaration = types.head
+    val classDeclaration = types.head.asInstanceOf[ClassDeclaration]
     val staticClassDeclarations = types.tail
     
     val mapper = new ObjectMapper
@@ -112,13 +112,14 @@ object compilationunit {
     defaultStatements ++ statements
   }
   
-  def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Array[ClassDeclaration] = {
+  def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Array[Statement] = {
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) || isDeprecated(x.getJavadoc) }
     val types = td.getTypes
 
     val constructors = methods filter { m => m.isConstructor() }
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
     val staticFields = td.getFields map { fromFieldDeclarationStatic(_) } flatten
+    val staticFieldStatements = staticFields.map(new ExpressionStatement(_))
     val hasSuperclass = td.getSuperclassType != null
     
     val constructor = if (constructors.size != 0 || memberFields.size != 0)
@@ -173,9 +174,9 @@ object compilationunit {
     val getClass = new MethodDefinition(new Identifier("getClass"), getClassFunc, "method", false, false)
     
     val init = if (constructor == null) List(interfacesProperty) else List(constructor, interfacesProperty)
-    val body = new ClassBody(init ++ staticFields ++ staticInnerClassProperties ++ staticMethods ++ memberMethods :+ getClass)
+    val body = new ClassBody(init ++ staticInnerClassProperties ++ staticMethods ++ memberMethods :+ getClass)
     
     val superClass = if (hasSuperclass) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
-    new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass) +: staticInnerClasses
+    new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass) +: (staticInnerClasses ++ staticFieldStatements)
   }
 }

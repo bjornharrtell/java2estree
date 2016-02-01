@@ -17,6 +17,16 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
 object Cli extends App with LazyLogging {
+  
+  val skipList = List(
+    "/jts/awt/",
+    "/jts/io/",
+    "/jts/geom/prep/",
+	  "/jts/util/Debug.java",
+	  "/jts/util/Stopwatch.java",
+	  "/jts/geom/Geometry.java"
+  ).map(e => ".*" + e + ".*")
+  
   val root = Paths.get(args(0))
   val outpath = Paths.get(args(1))
 
@@ -35,7 +45,11 @@ object Cli extends App with LazyLogging {
   }
   
   def convert(file: File) {
-    logger.info(s"Processing ${file.getName}")
+    if (skipList.find( e => file.getPath.matches(e) ).nonEmpty) {
+      logger.info(s"Skipping ${file.getPath}")
+      return
+    }
+    logger.info(s"Processing ${file.getPath}")
     parser.setResolveBindings(true)
     parser.setBindingsRecovery(true)
     parser.setStatementsRecovery(true)

@@ -55,7 +55,8 @@ object compilationunit {
     //println((path -> filename))
       
     val explicitImports = cu.imports.toList collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, root, file) }
-    val distinctImports = (builtinImports ++ packageImports ++ explicitImports) - classDeclaration.id.name
+    val distinctImports = (builtinImports(root, file) ++ packageImports ++ explicitImports) - classDeclaration.id.name
+    //val distinctImports = (packageImports ++ explicitImports) - classDeclaration.id.name
     val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
     
     val imports = usedImports.collect { case (name, path) => createImport(name, path) }

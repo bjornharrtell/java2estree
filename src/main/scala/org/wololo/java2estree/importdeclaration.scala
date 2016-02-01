@@ -16,16 +16,15 @@ object importdeclaration {
       relPath.toString
   }
   
-  def fromImportDeclaration(id: dom.ImportDeclaration, root: Path, file: Path): (String, String) = {
-    
+  def fromImportDeclaration(id: dom.ImportDeclaration, root: Path, file: Path): (String, String) = {  
     val orgname = id.getName.getFullyQualifiedName
     val path = orgname.replace('.', '/')
     val name = orgname.split('.').last
     
-    if (path.startsWith("com"))
+    //if (path.startsWith("org"))
       (name -> makeRelative(Paths.get(path), root, file))
-    else 
-      (name -> path)
+    //else 
+    //  (name -> path)
   }
   
   def createImport(name: String, path: String) = {
@@ -34,7 +33,7 @@ object importdeclaration {
         new Literal(s"'${path}'", s"'${path}'"))
   }
   
-  def builtinImports() : Map[String, String] = {
+  def builtinImports(root: Path, file: Path) : Map[String, String] = {
     Map(
       ("System" -> "java/lang/System"),
       ("Comparable" -> "java/lang/Comparable"),
@@ -46,7 +45,7 @@ object importdeclaration {
       ("Exception" -> "java/lang/Exception"),
       ("RuntimeException" -> "java/lang/RuntimeException"),
       ("IllegalArgumentException" -> "java/lang/IllegalArgumentException")
-    )
+    ).transform((name:String, path:String) => makeRelative(Paths.get(path), root, file))
   }
   
   def importsFromName(name: String, root: Path, ignore: String = null) : Map[String, String] = {
@@ -67,10 +66,10 @@ object importdeclaration {
     val pairs = files.filter({ x => x.getName.split('.')(0) != ignore }).collect { case x if isJava(x) => {
       val name = x.getName.split('.')(0)
       val path = subpath + '/' + name
-      if (path.startsWith("com"))
+      //if (path.startsWith("org"))
         (name -> makeRelative(Paths.get(path), root, x.toPath))
-      else 
-        (name -> path)
+      //else 
+      //  (name -> path)
     } }
     
     Map(pairs: _*)

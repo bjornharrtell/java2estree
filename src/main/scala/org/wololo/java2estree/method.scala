@@ -83,10 +83,12 @@ object method {
       }
       
       if (declarations.size > 1) {
-        // TODO: very naive sort.. need to make sure subclass types are checked before their ancestors
+        // TODO: Not sure this follows https://docs.oracle.com/javase/specs/jls/se7/html/jls-15.html#jls-15.12.2.5
+        // TODO: Consider all params
         var sorted = declarations.toList.sortWith { (md1, md2) => {
-          if (md1.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding().getSuperclass == null) false
-          else true
+          val b1 = md1.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
+          val b2 = md2.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
+          b1.isSubTypeCompatible(b2)
         } }
         fromTypeOverloads(sorted)
       } else {

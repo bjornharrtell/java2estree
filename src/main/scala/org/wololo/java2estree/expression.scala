@@ -186,8 +186,11 @@ object expression {
     case x: dom.ClassInstanceCreation =>
       if (x.getAnonymousClassDeclaration != null) {
         val body = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
-        val classBody = new ClassBody(body)
-        val classExpression = new ClassExpression(classBody, null)
+        val binding = x.getAnonymousClassDeclaration.resolveBinding
+        val bodyAndInterfaces = if (binding.getInterfaces.length > 0) body :+ compilationunit.createInterfacesProperty(binding.getInterfaces) else body
+        val classBody = new ClassBody(bodyAndInterfaces)
+        val superClass = if (binding.getSuperclass.getName != "Object") new Identifier(binding.getSuperclass.getName) else null
+        val classExpression = new ClassExpression(classBody, superClass)
         new NewExpression(classExpression, List())
       } else 
         new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))

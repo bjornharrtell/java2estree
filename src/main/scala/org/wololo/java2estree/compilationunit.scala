@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import java.nio.file.Path
+import org.eclipse.jdt.core.dom.ITypeBinding
 
 object compilationunit {
 
@@ -113,6 +114,18 @@ object compilationunit {
     defaultStatements ++ statements
   }
   
+  def createInterfacesProperty(interfaces: Array[dom.ITypeBinding]): MethodDefinition = {
+    val interfaceIdentifiers = interfaces.map { x => new Identifier(x.getName) }
+    val returnInterfaces = new ReturnStatement(new ArrayExpression(interfaceIdentifiers))
+    new MethodDefinition(
+      new Identifier("interfaces_"),
+      new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))),
+      "get",
+      false,
+      false
+    )
+  }
+  
   def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Array[Statement] = {
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) || isDeprecated(x.getJavadoc) }
     val types = td.getTypes
@@ -160,15 +173,7 @@ object compilationunit {
       )
     }
     
-    val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getName) }
-    val returnInterfaces = new ReturnStatement(new ArrayExpression(interfaces))
-    val interfacesProperty = new MethodDefinition(
-      new Identifier("interfaces_"),
-      new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))),
-      "get",
-      false,
-      false
-    )
+    val interfacesProperty = createInterfacesProperty(td.resolveBinding.getInterfaces)
     
     val returnClassName = new ReturnStatement(new Identifier(td.getName.getIdentifier))
     val getClassFunc = new FunctionExpression(List(), new BlockStatement(List(returnClassName)), false)

@@ -14,8 +14,8 @@ object method {
       fromBlock(x.getBody)
     )
   
-  def checkInterfaceExpression(x: MemberExpression, typeName: String) : LogicalExpression = {
-    val interfaces = new MemberExpression(x, new Identifier("interfaces_"), false)
+  def checkInterfaceExpression(e: Expression, typeName: String) : LogicalExpression = {
+    val interfaces = new MemberExpression(e, new Identifier("interfaces_"), false)
     
     val indexOf = new MemberExpression(interfaces, new Identifier("indexOf"), false)
     val indexOfCall = new CallExpression(indexOf, List(new Identifier(typeName)))

@@ -172,7 +172,11 @@ object expression {
       else 
         initial
     case x: dom.InstanceofExpression =>
-      toInstanceOf(toExpression(x.getLeftOperand), x.getRightOperand.resolveBinding.getName)
+      val left = toExpression(x.getLeftOperand)
+      val binding = x.getRightOperand.resolveBinding
+      val name = x.getRightOperand.resolveBinding.getName
+      if (binding.isInterface()) method.checkInterfaceExpression(left, name)
+      else toInstanceOf(left, name)
     case x: dom.CastExpression =>
       if (x.getType.toString == "int") {
         val trunc = new MemberExpression(new Identifier("Math"), new Identifier("trunc"), false)

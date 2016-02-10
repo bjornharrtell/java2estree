@@ -98,18 +98,12 @@ object compilationunit {
   
   def createConstructorBody(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] = {
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
-    val memberInitArrow = new ArrowFunctionExpression(
-      List(),
-      new BlockStatement(memberFields),
-      false
-    )
-    val memberInitCall = new ExpressionStatement(new CallExpression(memberInitArrow, List()))
 
     val params = List(new RestElement(new Identifier("args")))
     val statements = fromOverloadedMethodDeclarations(constructors)
     
     val superCall = if (hasSuper) new ExpressionStatement(new CallExpression(new Super, List())) else null
-    val defaultStatements = if (hasSuper) List(superCall, memberInitCall) else List(memberInitCall)
+    val defaultStatements = if (hasSuper) superCall +: memberFields else memberFields
     
     defaultStatements ++ statements
   }

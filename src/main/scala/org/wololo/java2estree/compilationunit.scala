@@ -84,7 +84,7 @@ object compilationunit {
   
   def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) = {
     val args = List(new SpreadElement(new Identifier("args")))
-    val statements = createConstructorBody(constructors, memberFields, hasSuper)
+    val statements = createConstructorBody(constructors, memberFields, hasSuper, constructors.length > 1)
     new MethodDefinition(
       new Identifier("constructor"),
       new FunctionExpression(
@@ -96,11 +96,11 @@ object compilationunit {
     )
   }
   
-  def createConstructorBody(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] = {
+  def createConstructorBody(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean, hasOverloads: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] = {
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
 
     val params = List(new RestElement(new Identifier("args")))
-    val statements = fromOverloadedMethodDeclarations(constructors)
+    val statements = fromOverloadedMethodDeclarations(constructors, true, hasOverloads)
     
     val superCall = if (hasSuper) new ExpressionStatement(new CallExpression(new Super, List())) else null
     val defaultStatements = if (hasSuper) superCall +: memberFields else memberFields

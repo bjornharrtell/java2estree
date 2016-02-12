@@ -63,7 +63,7 @@ object method {
     )
   }
   
-  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean = true)(implicit td: dom.TypeDeclaration) = {
+  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean, overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) = {
     def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): Statement = {
       def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
         if (mds.size > 0) {
@@ -111,14 +111,26 @@ object method {
         new MemberExpression(new Identifier("args"), new Identifier("length"), false),
         cases
       )
-      val args = List(new RestElement(new Identifier("args")))
-      val overloads = new ArrowFunctionExpression(args, new BlockStatement(List(switch)), true, false)
-      val overloadsConst = new VariableDeclaration(
-        List(new VariableDeclarator(new Identifier("overloads"), overloads)), "const")
-      val overloadsApply = new MemberExpression(new Identifier("overloads"), new Identifier("apply"), false)
-      val overloadsApplyCall = new CallExpression(overloadsApply, List(new ThisExpression, new Identifier("args")))
-      val returnStatement = new ReturnStatement(overloadsApplyCall)
-      List(overloadsConst, returnStatement)
+      if (overloadedConstructor) {
+        val args = List(new RestElement(new Identifier("args")))
+        val overloaded = new ArrowFunctionExpression(args, new BlockStatement(List(switch)), true, false)
+        val overloadedConst = new VariableDeclaration(
+          List(new VariableDeclarator(new Identifier("overloaded"), overloaded)), "const")
+        val overloadedApply = new MemberExpression(new Identifier("overloaded"), new Identifier("apply"), false)
+        val overloadedApplyCall = new CallExpression(overloadedApply, List(new ThisExpression, new Identifier("args")))
+        val returnStatement = new ReturnStatement(overloadedApplyCall)
+        List(overloadedConst, returnStatement)
+        /* Fails with 'super' outside of function or class
+        val params = List(new RestElement(new Identifier("args")))
+        var overloaded = new FunctionDeclaration(new Identifier("overloaded"), params, new BlockStatement(List(switch)))
+        val overloadedApply = new MemberExpression(new Identifier("overloaded"), new Identifier("apply"), false)
+        val overloadedApplyCall = new CallExpression(overloadedApply, List(new ThisExpression, new Identifier("args")))
+        val returnStatement = new ReturnStatement(overloadedApplyCall)
+        List(overloaded, returnStatement)
+        */
+      } else {
+        List(switch)
+      }
     }    
   }
   
@@ -144,7 +156,7 @@ object method {
     else false
   }
 
-  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : MethodDefinition = {
+  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration], overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) : MethodDefinition = {
     // check if single method has non overrided overload
     val binding = x.head.resolveBinding
     val superClass = binding.getDeclaringClass.getSuperclass
@@ -173,7 +185,7 @@ object method {
         new Identifier(x.head.getName.getIdentifier),
         new FunctionExpression(
             List(new RestElement(new Identifier("args"))),
-            new BlockStatement(fromOverloadedMethodDeclarations(x))
+            new BlockStatement(fromOverloadedMethodDeclarations(x, true, overloadedConstructor))
         ),
         "method",
         false,

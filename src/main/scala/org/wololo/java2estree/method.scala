@@ -6,6 +6,7 @@ import org.eclipse.jdt.core.dom
 import compilationunit._
 import expression._
 import statement._
+import scala.collection.mutable.Buffer
 
 object method {
   def toFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
@@ -97,7 +98,7 @@ object method {
           val b2 = md2.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
           b1.isSubTypeCompatible(b2)
         } }
-        List(fromTypeOverloads(sorted), new BreakStatement())
+        List(fromTypeOverloads(sorted))
       } else {
         if (overloadedConstructor) {
           val args = List(new SpreadElement(new Identifier("args")))
@@ -106,27 +107,26 @@ object method {
         } else {
           // TODO: should be able to work for overloaded constructors too
           val statements = fromBlock(declarations.head.getBody).body.toList
-          List(new BlockStatement(argsToLet(declarations.head) +: statements :+ new BreakStatement()))
+          argsToLet(declarations.head) +: statements
         }
       }
     }
     
     
     val cases = x.groupBy({ _.parameters.length }).toList.sortBy(_._1).collect({
-      case (argsCount, methods) => new SwitchCase(new Literal(argsCount, argsCount.toString), fromSameArgLength(methods))
+      case (argsCount, methods) => (new Literal(argsCount, argsCount.toString), fromSameArgLength(methods))
     })
     
     if (cases.size == 0) {
       List()
     }
     else {
-      var switch = new SwitchStatement(
-        new MemberExpression(new Identifier("args"), new Identifier("length"), false),
-        cases
-      )
+      val test = new BinaryExpression("===", new Identifier("args.length"), cases.head._1)
+      val ifStatement = toIf(new IfStatement(test, new BlockStatement(cases.head._2), null), cases.tail.toBuffer)
+      
       if (overloadedConstructor) {
         val args = List(new RestElement(new Identifier("args")))
-        val overloaded = new ArrowFunctionExpression(args, new BlockStatement(List(switch)), true, false)
+        val overloaded = new ArrowFunctionExpression(args, new BlockStatement(List(ifStatement)), true, false)
         val overloadedConst = new VariableDeclaration(
           List(new VariableDeclarator(new Identifier("overloaded"), overloaded)), "const")
         val overloadedApply = new MemberExpression(new Identifier("overloaded"), new Identifier("apply"), false)
@@ -142,9 +142,19 @@ object method {
         List(overloaded, returnStatement)
         */
       } else {
-        List(switch)
+        List(ifStatement)
       }
     }    
+  }
+  
+  def toIf(ifs: IfStatement, rest: Buffer[(Literal, List[Statement])]) : IfStatement = {
+    if (rest.length == 0) {
+      ifs
+    } else {
+      val test = new BinaryExpression("===", new Identifier("args.length"), rest.head._1)
+      val alternate = new IfStatement(test, new BlockStatement(rest.head._2), null)
+      new IfStatement(ifs.test, ifs.consequent, toIf(alternate, rest.tail))
+    }
   }
   
   def specificMethodConditional(m: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration): IfStatement = {

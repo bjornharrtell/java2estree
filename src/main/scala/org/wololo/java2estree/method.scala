@@ -64,7 +64,7 @@ object method {
   }
   
   def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean, overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) = {
-    def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): Statement = {
+    def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): List[Statement] = {
       def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
         if (mds.size > 0) {
           val es = mds.head.parameters.collect({ case x: dom.SingleVariableDeclaration => x }).zipWithIndex map { case (x, i) => varToBinaryExpression(x, i) }
@@ -75,9 +75,16 @@ object method {
             new LogicalExpression("&&", es(0), es(1))
           else 
             es(0)
-          val args = List(new SpreadElement(new Identifier("args")))
-          val call = new CallExpression(toArrowFunction(mds.head), args)
-          val consequent = new BlockStatement(List(new ReturnStatement(call)))
+          
+          val consequent = if (overloadedConstructor) {
+            val args = List(new SpreadElement(new Identifier("args")))
+            val call = new CallExpression(toArrowFunction(mds.head), args)
+            new BlockStatement(List(new ReturnStatement(call)))
+          } else {
+            // TODO: should be able to work for overloaded constructors too
+            val statements = fromBlock(mds.head.getBody).body.toList
+            new BlockStatement(argsToLet(mds.head) +: statements)
+          }
           new IfStatement(test, consequent, fromTypeOverloads(mds.tail))
         } else null
       }
@@ -90,17 +97,23 @@ object method {
           val b2 = md2.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
           b1.isSubTypeCompatible(b2)
         } }
-        fromTypeOverloads(sorted)
+        List(fromTypeOverloads(sorted), new BreakStatement())
       } else {
-        val args = List(new SpreadElement(new Identifier("args")))
-        val call = new CallExpression(toArrowFunction(declarations.head), args)
-        if (returns) new ReturnStatement(call) else new ExpressionStatement(call)
+        if (overloadedConstructor) {
+          val args = List(new SpreadElement(new Identifier("args")))
+          val call = new CallExpression(toArrowFunction(declarations.head), args)
+          if (returns) List(new ReturnStatement(call)) else List(new ExpressionStatement(call))
+        } else {
+          // TODO: should be able to work for overloaded constructors too
+          val statements = fromBlock(declarations.head.getBody).body.toList
+          List(new BlockStatement(argsToLet(declarations.head) +: statements :+ new BreakStatement()))
+        }
       }
     }
     
     
     val cases = x.groupBy({ _.parameters.length }).toList.sortBy(_._1).collect({
-      case (argsCount, methods) => new SwitchCase(new Literal(argsCount, argsCount.toString), List(fromSameArgLength(methods)))
+      case (argsCount, methods) => new SwitchCase(new Literal(argsCount, argsCount.toString), fromSameArgLength(methods))
     })
     
     if (cases.size == 0) {

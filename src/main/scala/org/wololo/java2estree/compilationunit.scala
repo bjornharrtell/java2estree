@@ -83,13 +83,11 @@ object compilationunit {
         bs.statements collect { case statement: dom.Statement => fromStatement(statement)})
   
   def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) = {
-    val args = List(new SpreadElement(new Identifier("args")))
     val statements = createConstructorBody(constructors, memberFields, hasSuper, constructors.length > 1)
+    val params = List(new RestElement(new Identifier("args")))
     new MethodDefinition(
       new Identifier("constructor"),
-      new FunctionExpression(
-        List(new RestElement(new Identifier("args"))), new BlockStatement(statements)
-      ),
+      new FunctionExpression(params, new BlockStatement(statements)),
       "constructor",
       false,
       false
@@ -102,7 +100,9 @@ object compilationunit {
     val params = List(new RestElement(new Identifier("args")))
     val statements = fromOverloadedMethodDeclarations(constructors, true, hasOverloads)
     
-    val superCall = if (hasSuper) new ExpressionStatement(new CallExpression(new Super, List())) else null
+    // TODO: cannot determine arguments here? or can we? :)
+    val arguments = List()
+    val superCall = if (hasSuper) new ExpressionStatement(new CallExpression(new Super, arguments)) else null
     val defaultStatements = if (hasSuper) superCall +: memberFields else memberFields
     
     defaultStatements ++ statements

@@ -81,6 +81,7 @@ object statement {
       val call = new CallExpression(overloadedCall, new ThisExpression +: toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.SuperConstructorInvocation =>
+      // TODO: this should be hoisted to the top of the constructor?
       val call = new CallExpression(new Super, toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.Block => fromBlock(x)

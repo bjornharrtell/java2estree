@@ -64,7 +64,7 @@ object method {
     )
   }
   
-  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean, overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) = {
+  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean, hasSuper: Boolean = false, overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) = {
     def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): List[Statement] = {
       def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
         if (mds.size > 0) {
@@ -77,7 +77,7 @@ object method {
           else 
             es(0)
           
-          val consequent = if (overloadedConstructor) {
+          val consequent = if (hasSuper && overloadedConstructor) {
             val args = List(new SpreadElement(new Identifier("args")))
             val call = new CallExpression(toArrowFunction(mds.head), args)
             new BlockStatement(List(new ReturnStatement(call)))
@@ -100,7 +100,7 @@ object method {
         } }
         List(fromTypeOverloads(sorted))
       } else {
-        if (overloadedConstructor) {
+        if (hasSuper && overloadedConstructor) {
           val args = List(new SpreadElement(new Identifier("args")))
           val call = new CallExpression(toArrowFunction(declarations.head), args)
           if (returns) List(new ReturnStatement(call)) else List(new ExpressionStatement(call))

@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import java.nio.file.Path
 import org.eclipse.jdt.core.dom.ITypeBinding
+import org.eclipse.jdt.internal.compiler.ASTVisitor
 
 object compilationunit {
 
@@ -98,9 +99,19 @@ object compilationunit {
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
 
     val params = List(new RestElement(new Identifier("args")))
-    val statements = fromOverloadedMethodDeclarations(constructors, true, hasOverloads)
+    val statements = fromOverloadedMethodDeclarations(constructors, true, hasSuper, hasOverloads)
     
-    // TODO: cannot determine arguments here? or can we? :)
+    // TODO: tried to remove intial super call if one exist later but that causes issues with field init
+    /*var hasSuper2 = hasSuper
+    if (constructors.length>0) {
+      constructors.head.accept(new dom.ASTVisitor() {
+        override def visit(node: SuperConstructorInvocation): Boolean = {
+          hasSuper2 = false
+          true
+        }
+      })
+    }*/
+    
     val arguments = List()
     val superCall = if (hasSuper) new ExpressionStatement(new CallExpression(new Super, arguments)) else null
     val defaultStatements = if (hasSuper) superCall +: memberFields else memberFields

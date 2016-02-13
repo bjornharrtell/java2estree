@@ -19,7 +19,7 @@ import java.nio.file.Path
 import org.eclipse.jdt.core.dom.ITypeBinding
 import org.eclipse.jdt.internal.compiler.ASTVisitor
 
-object compilationunit {
+object compilationunit extends LazyLogging {
 
   def isDeprecated(javadoc: dom.Javadoc) : Boolean = {
     if (javadoc != null && javadoc.tags != null)
@@ -46,8 +46,11 @@ object compilationunit {
     mapper.registerModule(DefaultScalaModule)
     val tree = mapper.valueToTree[JsonNode](types)
     
-    def countIdentifier(name: String) = 
-      tree.findParents("type").filter { x => x.get("type").asText() == "Identifier" && x.get("name").asText() == name }.size
+    def countIdentifier(name: String) = {
+      tree.findParents("type").filter {
+        x => x.get("type").asText() == "Identifier" && x.get("name").asText() == name
+      }.size
+    }
         
     val packageImports = if (cu.getPackage != null)
       importsFromName(cu.getPackage.getName.getFullyQualifiedName, root, name)
@@ -101,7 +104,7 @@ object compilationunit {
     val params = List(new RestElement(new Identifier("args")))
     val statements = fromOverloadedMethodDeclarations(constructors, true, hasSuper, hasOverloads)
     
-    // TODO: tried to remove intial super call if one exist later but that causes issues with field init
+    // TODO: tried to remove initial super call if one exist later but that causes issues with field init
     /*var hasSuper2 = hasSuper
     if (constructors.length>0) {
       constructors.head.accept(new dom.ASTVisitor() {
@@ -131,6 +134,19 @@ object compilationunit {
     )
   }
   
+  def createProperty(identifier: Identifier) : MethodDefinition = {
+    new MethodDefinition(
+        identifier,
+        new FunctionExpression(
+            List(),
+            new BlockStatement(List(new ReturnStatement(identifier)))
+        ),
+        "get",
+        false,
+        true
+      )
+  }
+  
   def fromTypeDeclaration(implicit td: dom.TypeDeclaration): Array[Statement] = {
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) || isDeprecated(x.getJavadoc) }
     val types = td.getTypes
@@ -158,26 +174,18 @@ object compilationunit {
         .filter(m => !m.isConstructor() && Modifier.isStatic(m.getModifiers))
         .groupBy(_.getName.getIdentifier).map {
       case (name, methods) => fromMethodDeclarations(methods)
-    } 
+    }
+    
+    val innerInterfaces = types.filter(x => x.isInterface()).map { x => new ClassDeclaration(new Identifier(x.getName.getIdentifier), new ClassBody(null), null) }
+    val innerInterfacesProperties = innerInterfaces.map { x => createProperty(x.id) }
     
     // TODO: Member inner classes should probably defined as getters
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
     val staticInnerClasses = types
-        .filter(x => Modifier.isStatic(x.getModifiers))
+        .filter(x => Modifier.isStatic(x.getModifiers) && !x.isInterface)
         .map { x => fromTypeDeclaration(x) } flatten
-    val staticInnerClassProperties = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => 
-      new MethodDefinition(
-        new Identifier(x.getName.getIdentifier),
-        new FunctionExpression(
-            List(),
-            new BlockStatement(List(new ReturnStatement(new Identifier(x.getName.getIdentifier))))
-        ),
-        "get",
-        false,
-        true
-      )
-    }
-    
+    val staticInnerClassProperties = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => createProperty(new Identifier(x.getName.getIdentifier)) }
+        
     val interfacesProperty = createInterfacesProperty(td.resolveBinding.getInterfaces)
     
     val returnClassName = new ReturnStatement(new Identifier(td.getName.getIdentifier))
@@ -185,9 +193,18 @@ object compilationunit {
     val getClass = new MethodDefinition(new Identifier("getClass"), getClassFunc, "method", false, false)
     
     val init = if (constructor == null) List(interfacesProperty) else List(constructor, interfacesProperty)
-    val body = new ClassBody(init ++ staticInnerClassProperties ++ staticMethods ++ memberMethods :+ getClass)
+    val body = new ClassBody(init ++ innerInterfacesProperties ++ staticInnerClassProperties ++ staticMethods ++ memberMethods :+ getClass)
     
-    val superClass = if (hasSuperclass) new Identifier(td.getSuperclassType.resolveBinding.getName) else null
-    new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass) +: (staticInnerClasses ++ staticFieldStatements)
+    val superClass = if (hasSuperclass) {
+      val superClassType = td.getSuperclassType.asInstanceOf[dom.SimpleType]
+      val superClassName = superClassType.getName.getFullyQualifiedName
+      val superClassNames = superClassName.split('.')
+      if (superClassNames.length > 1) {
+        new MemberExpression(new Identifier(superClassNames(0)), new Identifier(superClassNames(1)), false) 
+      } else new Identifier(superClassName)
+    }
+    else null
+    
+    new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass) +: (innerInterfaces ++ staticInnerClasses ++ staticFieldStatements)
   }
 }

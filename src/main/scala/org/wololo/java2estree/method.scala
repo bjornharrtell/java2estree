@@ -16,7 +16,7 @@ object method {
     )
   
   def checkInterfaceExpression(e: Expression, typeName: String) : LogicalExpression = {
-    val interfaces = new MemberExpression(e, new Identifier("interfaces_"), false)
+    val interfaces = new CallExpression(new MemberExpression(e, new Identifier("interfaces_"), false))
     
     val indexOf = new MemberExpression(interfaces, new Identifier("indexOf"), false)
     val indexOfCall = new CallExpression(indexOf, List(new Identifier(typeName)))
@@ -162,7 +162,12 @@ object method {
     val test = new BinaryExpression("===", argsLength, new Literal(m.parameters.size(), m.parameters.size().toString()))
     val consequent = new BlockStatement(argsToLet(m) +: fromBlock2(m.getBody).toList)
     val call = new CallExpression(new Identifier(m.getName.getIdentifier), List(new SpreadElement(new Identifier("args"))))
-    val alternate = new ReturnStatement(new MemberExpression(new Super(), call, false))
+    
+    val alternate = if (td.getSuperclassType != null) {
+      val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
+      val superCall = new MemberExpression(new MemberExpression(superClass, "prototype"), call)
+      new ReturnStatement(superCall)
+    } else null
     new IfStatement(test, consequent, alternate)
   }
   
@@ -179,7 +184,7 @@ object method {
     else false
   }
 
-  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration], overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) : MethodDefinition = {
+  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration], overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) : FunctionDeclaration = {
     // check if single method has non overrided overload
     val binding = x.head.resolveBinding
     val superClass = binding.getDeclaringClass.getSuperclass
@@ -196,23 +201,18 @@ object method {
       else
         fromBlock(x.head.getBody)
 
-      new MethodDefinition(
+      new FunctionDeclaration(
         new Identifier(x.head.getName.getIdentifier),
-        new FunctionExpression(params, block),
-        "method",
-        false,
-        dom.Modifier.isStatic(x.head.getModifiers)
+        params,
+        block,
+        false
       )
     } else {
-      new MethodDefinition(
+      new FunctionDeclaration(
         new Identifier(x.head.getName.getIdentifier),
-        new FunctionExpression(
-            List(new RestElement(new Identifier("args"))),
-            new BlockStatement(fromOverloadedMethodDeclarations(x, true, overloadedConstructor))
-        ),
-        "method",
-        false,
-        dom.Modifier.isStatic(x.head.getModifiers)
+        List(new RestElement(new Identifier("args"))),
+        new BlockStatement(fromOverloadedMethodDeclarations(x, true, overloadedConstructor)),
+        false
       )
     }
   }

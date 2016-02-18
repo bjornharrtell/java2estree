@@ -185,13 +185,13 @@ object expression {
         toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
       if (x.getAnonymousClassDeclaration != null) {
-        val body = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
-        val binding = x.getAnonymousClassDeclaration.resolveBinding
-        val bodyAndInterfaces = if (binding.getInterfaces.length > 0) body :+ compilationunit.createInterfacesProperty(binding.getInterfaces) else body
-        val classBody = new ClassBody(bodyAndInterfaces)
-        val superClass = if (binding.getSuperclass.getName != "Object") new Identifier(binding.getSuperclass.getName) else null
-        val classExpression = new ClassExpression(classBody, superClass)
-        new NewExpression(classExpression, List())
+        // val body = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
+        // val binding = x.getAnonymousClassDeclaration.resolveBinding
+        // val bodyAndInterfaces = if (binding.getInterfaces.length > 0) body :+ compilationunit.createInterfacesProperty(binding.getInterfaces) else body
+        // val block = new BlockStatement(body)
+        // val superClass = if (binding.getSuperclass.getName != "Object") new Identifier(binding.getSuperclass.getName) else null
+        val functionExpression = new FunctionExpression(List(), new BlockStatement(List()), false)
+        new NewExpression(functionExpression, List())
       } else 
         new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
@@ -227,8 +227,13 @@ object expression {
     case x: dom.SuperFieldAccess =>
       new Literal("super", "super")
     case x: dom.SuperMethodInvocation =>
-      val callee = new MemberExpression(new Super(), new Identifier(x.getName.getIdentifier), false)
-      new CallExpression(callee, toExpressions(x.arguments))
+      // val callee = new MemberExpression(new Super(), new Identifier(x.getName.getIdentifier), false)
+      // new CallExpression(callee, toExpressions(x.arguments))
+      if (td.getSuperclassType != null) {
+        val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
+        val constructor = new MemberExpression(new MemberExpression(superClass, "prototype"), "constructor")
+        new CallExpression(constructor, toExpressions(x.arguments))
+      } else new Literal(null, "null") // NOTE: this happens when superclass is out of source tree
     case null =>
       new Literal(null, "null")
     /*case x => {

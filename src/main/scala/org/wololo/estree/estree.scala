@@ -9,10 +9,16 @@ class Program (
   val body: Iterable[Node] // [ Statement | ModuleDeclaration ];
 ) extends Node
 
-class Function (
+class FunctionES5 (
   val params: Iterable[Pattern],
-  val body: Node, // BlockStatement | Node
-  val generator: Boolean
+  val body: BlockStatement, // BlockStatement | Expression
+  val generator: Boolean = false
+) extends Node
+
+class FunctionES6 (
+  val params: Iterable[Pattern],
+  val body: Node, // BlockStatement | Expression
+  val generator: Boolean = false
 ) extends Node
 
 // Statements
@@ -90,7 +96,7 @@ class FunctionDeclaration (
   params: Iterable[Pattern],
   body: BlockStatement,
   generator: Boolean = false
-) extends Function(params, body, generator) with Declaration
+) extends FunctionES5(params, body, generator) with Declaration
 
 class VariableDeclaration (
   val declarations: Iterable[VariableDeclarator],
@@ -112,11 +118,24 @@ class ArrayExpression(
   val elements: Iterable[Expression]
 ) extends Expression
 
+class ObjectExpression(
+  val properties: Iterable[Property]
+) extends Expression
+
+class Property(
+  val key: Expression,
+  val value: Expression,
+  val kind: String = "init",
+  val computed: Boolean = false,
+  val method: Boolean = false,
+  val shorthand: Boolean = false
+) extends Node
+
 class FunctionExpression (
   params: Iterable[Pattern],
   body: BlockStatement,
   generator: Boolean = false
-) extends Function(params, body, generator) with Expression
+) extends FunctionES5(params, body, generator) with Expression
 
 class SequenceExpression (
   val expressions: Iterable[Expression]
@@ -154,7 +173,7 @@ class ConditionalExpression (
 
 class CallExpression (
   val callee: Node, // Expression or Super
-  val arguments: Iterable[Node] // Expression or SpreadElement
+  val arguments: Iterable[Node] = List()// Expression or SpreadElement
 ) extends Expression
 
 class NewExpression (
@@ -165,15 +184,25 @@ class NewExpression (
 class MemberExpression (
   val `object`: Node, // Expression or Super
   val property: Expression,
-  val computed: Boolean
-) extends Expression with Pattern
+  val computed: Boolean = false
+) extends Expression with Pattern {
+  def this(`object`: String, property: String) {
+    this(new Identifier(`object`), new Identifier(property)) 
+  }
+  def this(`object`: Node, property: String) {
+    this(`object`, new Identifier(property)) 
+  }
+  def this(`object`: String, property: Expression) {
+    this(new Identifier(`object`), property) 
+  }
+}
 
 class ArrowFunctionExpression(
   params: Iterable[Pattern],
   body: Node, // BlockStatement | Expression
   val expression: Boolean,
   generator: Boolean = false
-) extends Function(params, body, generator) with Expression
+) extends FunctionES6(params, body, generator) with Expression
 
 class Super extends Node
 

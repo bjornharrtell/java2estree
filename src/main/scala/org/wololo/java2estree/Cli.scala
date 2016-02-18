@@ -23,8 +23,8 @@ object Cli extends App with LazyLogging {
     "/jts/io/",
     "/jts/geom/prep/",
 	  "/jts/util/Debug.java",
-	  "/jts/util/Stopwatch.java",
-	  "/jts/geom/Geometry.java"
+	  "/jts/util/Stopwatch.java"
+	  //"/jts/geom/Geometry.java"
   ).map(e => ".*" + e + ".*")
   
   val root = Paths.get(args(0))
@@ -49,6 +49,9 @@ object Cli extends App with LazyLogging {
       logger.info(s"Skipping ${file.getPath}")
       return
     }
+    
+    // if (file.getName != "StringUtil") return;
+    
     logger.info(s"Processing ${file.getPath}")
     parser.setResolveBindings(true)
     parser.setBindingsRecovery(true)

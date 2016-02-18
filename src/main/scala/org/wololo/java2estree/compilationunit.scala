@@ -207,7 +207,9 @@ object compilationunit extends LazyLogging {
     val prototype = new MemberExpression(td.getName.getIdentifier, "prototype")
     val prototypeDefinition = if (hasSuperclass) {
       val superPrototype = new MemberExpression(superClass, "prototype")
-      val objectCreate = new CallExpression(new MemberExpression("Object", "create"), List(superPrototype, membersObject))
+      val propDefs = properties.map { x => new Property(x.key, new ObjectExpression(List(new Property("value", x.value)))) }
+      val propDefsObject = new ObjectExpression(propDefs)
+      val objectCreate = new CallExpression(new MemberExpression("Object", "create"), List(superPrototype, propDefsObject))
       val prototypeAssignment = new ExpressionStatement(new AssignmentExpression("=", prototype, objectCreate))
       val prototypeConstructor = new MemberExpression(prototype, "constructor")
       val prototypeConstructorAssignment = new ExpressionStatement(new AssignmentExpression("=", prototypeConstructor, new Identifier(td.getName.getIdentifier)))

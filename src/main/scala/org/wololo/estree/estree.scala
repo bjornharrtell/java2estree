@@ -129,7 +129,11 @@ class Property(
   val computed: Boolean = false,
   val method: Boolean = false,
   val shorthand: Boolean = false
-) extends Node
+) extends Node {
+  def this(key: String, value: Expression) {
+    this(new Identifier(key), value)
+  }
+}
 
 class FunctionExpression (
   params: Iterable[Pattern],

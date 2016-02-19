@@ -132,6 +132,14 @@ object compilationunit extends LazyLogging {
     new Property(new Identifier("interfaces_"), new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))))
   }
   
+  def inheritInterfaces(node: Node, interfaces: List[Identifier]) : Node = {
+    if (interfaces.length == 0)
+      node
+    else
+      inheritInterfaces(
+          new CallExpression(new MemberExpression("Object", "create"), List(interfaces.head)), interfaces.tail)
+  }
+  
   def fromTypeDeclaration(implicit td: dom.TypeDeclaration): List[Statement] = {
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) || isDeprecated(x.getJavadoc) }
     val types = td.getTypes
@@ -182,18 +190,13 @@ object compilationunit extends LazyLogging {
     val properties = memberMethods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList ++ List(interfacesProperty, getClassProperty)
     val membersObject = new ObjectExpression(properties)
     val prototype = new MemberExpression(td.getName.getIdentifier, "prototype")
-    val prototypeDefinition = if (hasSuperclass) {
-      val superPrototype = new MemberExpression(superClass, "prototype")
-      val propDefs = properties.map { x => new Property(x.key, new ObjectExpression(List(new Property("value", x.value)))) }
-      val propDefsObject = new ObjectExpression(propDefs)
-      val objectCreate = new CallExpression(new MemberExpression("Object", "create"), List(superPrototype, propDefsObject))
-      val prototypeAssignment = new ExpressionStatement(new AssignmentExpression("=", prototype, objectCreate))
-      val prototypeConstructor = new MemberExpression(prototype, "constructor")
-      val prototypeConstructorAssignment = new ExpressionStatement(new AssignmentExpression("=", prototypeConstructor, new Identifier(td.getName.getIdentifier)))
-      List(prototypeAssignment, prototypeConstructorAssignment)
-    } else {
-      List(new ExpressionStatement(new AssignmentExpression("=", prototype, membersObject)))
-    }
+    val extend = new ExpressionStatement(new CallExpression(new Identifier("extend"), List(prototype, membersObject)))
+
+    // TODO: inherit interfaces
+    val classDefinition = if (hasSuperclass) {
+      val inherits = new ExpressionStatement(new CallExpression(new Identifier("inherits"), List(new Identifier(td.getName.getIdentifier), superClass)))
+      List(constructor, inherits)
+    } else List(constructor)
     
     val staticInnerClassAssignments = staticInnerClasses.map { x => 
       val id = x.head.asInstanceOf[FunctionDeclaration].id
@@ -209,6 +212,6 @@ object compilationunit extends LazyLogging {
       new ExpressionStatement(assignmentExpression)
     }
     
-    List(constructor) ++ prototypeDefinition ++ staticMethodAssignments ++ staticInnerClasses.flatten.toList ++ staticInnerClassAssignments ++ staticFieldStatements  
+    classDefinition ++ List(extend) ++ staticMethodAssignments ++ staticInnerClasses.flatten.toList ++ staticInnerClassAssignments ++ staticFieldStatements  
   }
 }

@@ -44,7 +44,9 @@ object importdeclaration {
       ("StringBuffer" -> "java/lang/StringBuffer"),
       ("Exception" -> "java/lang/Exception"),
       ("RuntimeException" -> "java/lang/RuntimeException"),
-      ("IllegalArgumentException" -> "java/lang/IllegalArgumentException")
+      ("IllegalArgumentException" -> "java/lang/IllegalArgumentException"),
+      ("extend" -> "extend"),
+      ("inherits" -> "inherits")
     ).transform((name:String, path:String) => makeRelative(Paths.get(path), root, file))
   }
   

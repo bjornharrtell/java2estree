@@ -41,19 +41,27 @@ object method {
   /**
    * Create destructuring statement from args and method params  
    */
-  def argsToLet(md: dom.MethodDeclaration) : VariableDeclaration = {
-    val patterns = fromParameters(md.parameters)
+  def argsToLet(patterns: List[Identifier]) : VariableDeclaration = {
+    val declarators = patterns.zipWithIndex.map({ case (e, i) => 
+      new VariableDeclarator(e, new MemberExpression(new Identifier("args"), new Literal(i, i.toString()), true))
+    })
+    
     new VariableDeclaration(
-      List(new VariableDeclarator(new ArrayPattern(patterns), new Identifier("args"))),
+      declarators,
       "let"
     )
   }
   
   def toArrowFunction(md: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = {
-    val statements = fromBlock(md.getBody).body.toList
+    val bodyStatements = fromBlock(md.getBody).body.toList
+    var patterns = fromParameters(md.parameters).toList
+    val statements = if (patterns.length > 0) 
+      argsToLet(patterns) +: bodyStatements
+    else bodyStatements
+      
     new ArrowFunctionExpression(
       List(new RestElement(new Identifier("args"))),
-      new BlockStatement(argsToLet(md) +: statements),
+      new BlockStatement(statements),
       false
     )
   }
@@ -76,9 +84,12 @@ object method {
             val call = new CallExpression(toArrowFunction(mds.head), args)
             new BlockStatement(List(new ReturnStatement(call)))
           } else {
-            // TODO: should be able to work for overloaded constructors too
-            val statements = fromBlock(mds.head.getBody).body.toList
-            new BlockStatement(argsToLet(mds.head) +: statements)
+            val bodyStatements = fromBlock(mds.head.getBody).body.toList
+            var patterns = fromParameters(mds.head.parameters).toList
+            val statements = if (patterns.length > 0) 
+              argsToLet(patterns) +: bodyStatements
+            else bodyStatements
+            new BlockStatement(statements)
           }
           new IfStatement(test, consequent, fromTypeOverloads(mds.tail))
         } else null
@@ -94,8 +105,11 @@ object method {
         } }
         List(fromTypeOverloads(sorted))
       } else {
-        val statements = fromBlock(declarations.head.getBody).body.toList
-        argsToLet(declarations.head) +: statements
+        val bodyStatements = fromBlock(declarations.head.getBody).body.toList
+        var patterns = fromParameters(declarations.head.parameters).toList
+        if (patterns.length > 0) 
+          argsToLet(patterns) +: bodyStatements
+        else bodyStatements
       }
     }
     
@@ -137,7 +151,14 @@ object method {
   def specificMethodConditional(m: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration): IfStatement = {
     val argsLength = new MemberExpression("args", "length")
     val test = new BinaryExpression("===", argsLength, new Literal(m.parameters.size(), m.parameters.size().toString()))
-    val consequent = new BlockStatement(argsToLet(m) +: fromBlock2(m.getBody).toList)
+    
+    val bodyStatements = fromBlock2(m.getBody).toList
+    var patterns = fromParameters(m.parameters).toList
+    val statements = if (patterns.length > 0) 
+      argsToLet(patterns) +: bodyStatements
+    else bodyStatements
+    
+    val consequent = new BlockStatement(statements)
     var apply = new MemberExpression(m.getName.getIdentifier, "apply")
     val call = new CallExpression(apply, List(new ThisExpression, new Identifier("args")))
     val alternate = if (td.getSuperclassType != null) {

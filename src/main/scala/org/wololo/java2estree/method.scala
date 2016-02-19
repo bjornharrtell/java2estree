@@ -20,7 +20,7 @@ object method {
   } 
   
   def varToBinaryExpression(x: dom.SingleVariableDeclaration, i: Int) = {
-    val identifier = new MemberExpression(new Identifier("args"), new Literal(i, i.toString), true)
+    val identifier = new MemberExpression(new Identifier("arguments"), new Literal(i, i.toString), true)
     val binding = x.getType.resolveBinding
     val isInterface = binding.isInterface
     val typeName = binding.getName
@@ -43,7 +43,7 @@ object method {
    */
   def argsToLet(patterns: List[Identifier]) : VariableDeclaration = {
     val declarators = patterns.zipWithIndex.map({ case (e, i) => 
-      new VariableDeclarator(e, new MemberExpression(new Identifier("args"), new Literal(i, i.toString()), true))
+      new VariableDeclarator(e, new MemberExpression(new Identifier("arguments"), new Literal(i, i.toString()), true))
     })
     
     new VariableDeclaration(
@@ -60,7 +60,7 @@ object method {
     else bodyStatements
       
     new ArrowFunctionExpression(
-      List(new RestElement(new Identifier("args"))),
+      List(),
       new BlockStatement(statements),
       false
     )
@@ -80,7 +80,7 @@ object method {
             es(0)
           
           val consequent = if (hasSuper && overloadedConstructor) {
-            val args = List(new SpreadElement(new Identifier("args")))
+            val args = List(new Identifier("arguments"))
             val call = new CallExpression(toArrowFunction(mds.head), args)
             new BlockStatement(List(new ReturnStatement(call)))
           } else {
@@ -122,14 +122,14 @@ object method {
       List()
     }
     else {
-      val test = new BinaryExpression("===", new Identifier("args.length"), cases.head._1)
+      val test = new BinaryExpression("===", new Identifier("arguments.length"), cases.head._1)
       val ifStatement = toIf(new IfStatement(test, new BlockStatement(cases.head._2), null), cases.tail.toBuffer)
       
       if (overloadedConstructor) {
-        val params = List(new RestElement(new Identifier("args")))
+        val params = List()
         var overloaded = new FunctionDeclaration(new Identifier("overloaded"), params, new BlockStatement(List(ifStatement)))
         val overloadedApply = new MemberExpression(new Identifier("overloaded"), new Identifier("apply"), false)
-        val overloadedApplyCall = new CallExpression(overloadedApply, List(new ThisExpression, new Identifier("args")))
+        val overloadedApplyCall = new CallExpression(overloadedApply, List(new ThisExpression, new Identifier("arguments")))
         val returnStatement = new ReturnStatement(overloadedApplyCall)
         List(overloaded, returnStatement)
       } else {
@@ -142,14 +142,14 @@ object method {
     if (rest.length == 0) {
       ifs
     } else {
-      val test = new BinaryExpression("===", new Identifier("args.length"), rest.head._1)
+      val test = new BinaryExpression("===", new Identifier("arguments.length"), rest.head._1)
       val alternate = new IfStatement(test, new BlockStatement(rest.head._2), null)
       new IfStatement(ifs.test, ifs.consequent, toIf(alternate, rest.tail))
     }
   }
   
   def specificMethodConditional(m: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration): IfStatement = {
-    val argsLength = new MemberExpression("args", "length")
+    val argsLength = new MemberExpression("arguments", "length")
     val test = new BinaryExpression("===", argsLength, new Literal(m.parameters.size(), m.parameters.size().toString()))
     
     val bodyStatements = fromBlock2(m.getBody).toList
@@ -160,7 +160,7 @@ object method {
     
     val consequent = new BlockStatement(statements)
     var apply = new MemberExpression(m.getName.getIdentifier, "apply")
-    val call = new CallExpression(apply, List(new ThisExpression, new Identifier("args")))
+    val call = new CallExpression(apply, List(new ThisExpression, new Identifier("arguments")))
     val alternate = if (td.getSuperclassType != null) {
       val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
       val superCall = new MemberExpression(new MemberExpression(superClass, "prototype"), call)
@@ -190,7 +190,7 @@ object method {
     
     if (x.size == 1) {
       val params = if (superOverloads)
-        List(new RestElement(new Identifier("args")))
+        List()
       else
         fromParameters(x.head.parameters)
         
@@ -208,7 +208,7 @@ object method {
     } else {
       new FunctionDeclaration(
         new Identifier(x.head.getName.getIdentifier),
-        List(new RestElement(new Identifier("args"))),
+        List(),
         new BlockStatement(fromOverloadedMethodDeclarations(x, true, overloadedConstructor)),
         false
       )

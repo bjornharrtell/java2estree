@@ -130,7 +130,7 @@ object method {
         val overloaded = new ArrowFunctionExpression(args, new BlockStatement(List(ifStatement)), true, false)
         val overloadedConst = new VariableDeclaration(
           List(new VariableDeclarator(new Identifier("overloaded"), overloaded)), "const")
-        val overloadedApply = new MemberExpression(new Identifier("overloaded"), new Identifier("apply"), false)
+        val overloadedApply = new MemberExpression("overloaded", "apply")
         val overloadedApplyCall = new CallExpression(overloadedApply, List(new ThisExpression, new Identifier("args")))
         val returnStatement = new ReturnStatement(overloadedApplyCall)
         List(overloadedConst, returnStatement)
@@ -159,7 +159,7 @@ object method {
   }
   
   def specificMethodConditional(m: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration): IfStatement = {
-    val argsLength = new MemberExpression(new Identifier("args"), new Identifier("length"), false)
+    val argsLength = new MemberExpression("args", "length")
     val test = new BinaryExpression("===", argsLength, new Literal(m.parameters.size(), m.parameters.size().toString()))
     val consequent = new BlockStatement(argsToLet(m) +: fromBlock2(m.getBody).toList)
     var apply = new MemberExpression(m.getName.getIdentifier, "apply")
@@ -222,7 +222,7 @@ object method {
     declaration.fragments collect {
       case field: dom.VariableDeclarationFragment if !dom.Modifier.isStatic(declaration.getModifiers) =>
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-        new ThisExpression(), new Identifier(field.getName.getIdentifier), false),
+        new ThisExpression(), field.getName.getIdentifier),
         toExpression(field.getInitializer)))
   }
   
@@ -230,7 +230,7 @@ object method {
     declaration.fragments collect { 
       case field: dom.VariableDeclarationFragment if dom.Modifier.isStatic(declaration.getModifiers) => {
         if (field.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of VariableDeclarationFragment when parsing " + field + " with parent " + field.getParent)    
-        val left = new MemberExpression(new Identifier(td.getName.getIdentifier), new Identifier(field.getName.getIdentifier), false)
+        val left = new MemberExpression(td.getName.getIdentifier, field.getName.getIdentifier)
         val right = toExpression(field.getInitializer)
         new AssignmentExpression("=", left, right)
       }

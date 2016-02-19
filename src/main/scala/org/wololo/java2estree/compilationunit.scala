@@ -132,19 +132,6 @@ object compilationunit extends LazyLogging {
     new Property(new Identifier("interfaces_"), new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))))
   }
   
-  def createProperty(identifier: Identifier) : MethodDefinition = {
-    new MethodDefinition(
-        identifier,
-        new FunctionExpression(
-            List(),
-            new BlockStatement(List(new ReturnStatement(identifier)))
-        ),
-        "get",
-        false,
-        true
-      )
-  }
-  
   def fromTypeDeclaration(implicit td: dom.TypeDeclaration): List[Statement] = {
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) || isDeprecated(x.getJavadoc) }
     val types = td.getTypes
@@ -171,26 +158,17 @@ object compilationunit extends LazyLogging {
       case (name, methods) => fromMethodDeclarations(methods)
     }
     
-    val innerInterfaces = types.filter(x => x.isInterface()).map { x => new ClassDeclaration(new Identifier(x.getName.getIdentifier), new ClassBody(null), null) }
-    val innerInterfacesProperties = innerInterfaces.map { x => createProperty(x.id) }
-    
     // TODO: Member inner classes should probably defined as getters
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
     val staticInnerClasses = types
         .filter(x => Modifier.isStatic(x.getModifiers) && !x.isInterface)
         .map { x => fromTypeDeclaration(x) }
-    // val staticInnerClassProperties = types.filter(x => Modifier.isStatic(x.getModifiers)).map { x => createProperty(new Identifier(x.getName.getIdentifier)) }
-        
     val interfacesProperty = createInterfacesProperty(td.resolveBinding.getInterfaces)
     
     val returnClassName = new ReturnStatement(new Identifier(td.getName.getIdentifier))
     val getClassFunc = new FunctionExpression(List(), new BlockStatement(List(returnClassName)), false)
     val getClassProperty = new Property("getClass", getClassFunc)
-    val getClass = new MethodDefinition(new Identifier("getClass"), getClassFunc, "method", false, false)
-    
-    val init = if (constructor == null) List(interfacesProperty) else List(constructor, interfacesProperty)
-    // val body = new ClassBody(init ++ innerInterfacesProperties ++ staticInnerClassProperties ++ staticMethods ++ memberMethods :+ getClass)
-    
+
     val superClass = if (hasSuperclass) {
       val superClassType = td.getSuperclassType.asInstanceOf[dom.SimpleType]
       val superClassName = superClassType.getName.getFullyQualifiedName
@@ -200,8 +178,6 @@ object compilationunit extends LazyLogging {
       } else new Identifier(superClassName)
     }
     else null
-    
-    // new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass) +: (innerInterfaces ++ staticInnerClasses ++ staticFieldStatements)
     
     val properties = memberMethods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList ++ List(interfacesProperty, getClassProperty)
     val membersObject = new ObjectExpression(properties)

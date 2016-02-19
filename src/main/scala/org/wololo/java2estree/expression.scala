@@ -8,15 +8,15 @@ import com.typesafe.scalalogging.LazyLogging
 import method._
 
 object expression {
+  val trunc = new MemberExpression("Math", "trunc")
+  def truncCall(e: Expression) = new CallExpression(trunc, List(e))
+  
   def resolve(name: dom.Name) = if (name.isSimpleName())
     resolveSimpleName(name.asInstanceOf[dom.SimpleName])
   else
     resolveQualifiedName(name.asInstanceOf[dom.QualifiedName])
   
-  def resolveSimpleName(s: dom.SimpleName) = { 
-    //println(s)
-    //println(s.resolveTypeBinding().getQualifiedName)
-    // TODO: use s.resolveTypeBinding().getQualifiedName to record needed imports
+  def resolveSimpleName(s: dom.SimpleName) = {
     if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
     s.resolveBinding match { 
       case b: dom.IVariableBinding if b.isParameter() =>
@@ -28,7 +28,7 @@ object expression {
           new Identifier(b.getDeclaringClass.getName)
         else 
           new ThisExpression()
-        new MemberExpression(member, new Identifier(s.getFullyQualifiedName), false)
+        new MemberExpression(member, s.getFullyQualifiedName)
       case b: dom.ITypeBinding =>
         new Identifier(s.getFullyQualifiedName)
       case b: dom.IPackageBinding =>
@@ -37,16 +37,14 @@ object expression {
   }
   
   def resolveQualifiedName(q: dom.QualifiedName): Expression  = {
-    //println(q)
-    //println(q.resolveTypeBinding().getQualifiedName)
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
     q.getQualifier.resolveBinding match { 
       case b: dom.IVariableBinding =>
-        new MemberExpression(resolve(q.getQualifier), new Identifier(q.getName.getIdentifier), false)
+        new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
       case b: dom.ITypeBinding =>
-        new MemberExpression(resolve(q.getQualifier), new Identifier(q.getName.getIdentifier), false)
+        new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
       case b: dom.IPackageBinding =>
-        new MemberExpression(resolve(q.getQualifier), new Identifier(q.getName.getIdentifier), false)
+        new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
     }
   }
   
@@ -64,28 +62,19 @@ object expression {
     else if (token.last == 'd')
       token.substring(0, token.length-1)
     else token
-
-  def truncCheck(op: String, left: dom.Expression, right: dom.Expression) : Boolean =
-    left.resolveTypeBinding().getName == "int" &&
-    right.resolveTypeBinding().getName == "int" &&
-    op == "/"
   
-  def trunc(e: Expression) = {
-    val trunc = new MemberExpression(new Identifier("Math"), new Identifier("trunc"), false)
-    new CallExpression(trunc, List(e))
-  }
-    
   /**
    * Convert op and expressions from a dom.InfixExpression and truncate if needed.
    */
   def toBinaryExpression(op: String, left: Expression, rest: Buffer[dom.Expression], shouldTrunc: Boolean)(implicit td: dom.TypeDeclaration) : Expression = {
+    
     def be = new BinaryExpression(op, left, toExpression(rest.get(0)))
     if (rest.length == 0)
       left
     else if (rest.length == 1)
-      if (shouldTrunc) trunc(be) else be
+      if (shouldTrunc) truncCall(be) else be
     else
-      if (shouldTrunc) toBinaryExpression(op, trunc(be), rest.tail, shouldTrunc)
+      if (shouldTrunc) toBinaryExpression(op, truncCall(be), rest.tail, shouldTrunc)
       else toBinaryExpression(op, be, rest.tail, shouldTrunc)
   }
   
@@ -106,9 +95,9 @@ object expression {
     val yCall = new CallExpression(new Identifier("Array"), List(y))
     val yArrow = new ArrowFunctionExpression(List(), yCall, false, true)
     
-    val innerMember = new MemberExpression(xCall, new Identifier("fill"), false)
+    val innerMember = new MemberExpression(xCall, "fill")
     val innerCall = new CallExpression(innerMember, List())
-    val outerMember = new MemberExpression(innerCall, new Identifier("map"), false)
+    val outerMember = new MemberExpression(innerCall, "map")
     new CallExpression(outerMember, List(yArrow))
   }
   
@@ -166,7 +155,7 @@ object expression {
         right.resolveTypeBinding().getName == "int" &&
         op == "/"
       val e = new BinaryExpression(op, toExpression(left), toExpression(right))
-      val initial = if (shouldTrunc) trunc(e) else e
+      val initial = if (shouldTrunc) truncCall(e) else e
       if (x.extendedOperands.size() > 0)
         toBinaryExpression(op, initial, x.extendedOperands collect { case x: dom.Expression => x }, shouldTrunc)
       else 
@@ -178,10 +167,9 @@ object expression {
       if (binding.isInterface()) method.checkInterfaceExpression(left, name)
       else toInstanceOf(left, name)
     case x: dom.CastExpression =>
-      if (x.getType.toString == "int") {
-        val trunc = new MemberExpression(new Identifier("Math"), new Identifier("trunc"), false)
-        new CallExpression(trunc, List(toExpression(x.getExpression)))
-      } else
+      if (x.getType.toString == "int")
+        truncCall(toExpression(x.getExpression))
+      else
         toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
       if (x.getAnonymousClassDeclaration != null) {
@@ -195,8 +183,8 @@ object expression {
         new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
       x.getExpression match {
-        case m: dom.ThisExpression => new MemberExpression(new ThisExpression(), new Identifier(x.getName.getIdentifier), false)
-        case m: dom.Expression => new MemberExpression(toExpression(x.getExpression), new Identifier(x.getName.getIdentifier), false)
+        case m: dom.ThisExpression => new MemberExpression(new ThisExpression(), x.getName.getIdentifier)
+        case m: dom.Expression => new MemberExpression(toExpression(x.getExpression), x.getName.getIdentifier)
       }
     case x: dom.MethodInvocation =>
       if (x.resolveMethodBinding == null)
@@ -210,24 +198,20 @@ object expression {
         toExpression(x.getExpression)
       val declaringClassName = binding.getDeclaringClass.getName
       val identifier = x.getName.getIdentifier
-      
       // NOTE: special case for String.equals
       if (declaringClassName == "String" && identifier == "equals") {
         // TODO: assumed name of callee
-        val left = new MemberExpression(new ThisExpression(), new Identifier("name"), false)
+        val left = new MemberExpression(new ThisExpression(), "name")
         val right = toExpressions(x.arguments).head
         return new BinaryExpression("===", left, right)
       }
-      
       val name = if (declaringClassName == "Math" && identifier == "rint") "round" else identifier
-      val callee = new MemberExpression(t, new Identifier(name), false)
+      val callee = new MemberExpression(t, name)
       if (binding.getDeclaringClass.getName == "String" && name == "length") callee
       else new CallExpression(callee, toExpressions(x.arguments))
     case x: dom.SuperFieldAccess =>
-      new Literal("super", "super")
+      throw new RuntimeException("SuperFieldAccess is unsupported")
     case x: dom.SuperMethodInvocation =>
-      // val callee = new MemberExpression(new Super(), new Identifier(x.getName.getIdentifier), false)
-      // new CallExpression(callee, toExpressions(x.arguments))
       if (td.getSuperclassType != null) {
         val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
         val method = new MemberExpression(new MemberExpression(superClass, "prototype"), x.getName.getIdentifier)

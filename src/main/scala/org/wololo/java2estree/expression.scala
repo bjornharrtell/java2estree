@@ -173,11 +173,17 @@ object expression {
         toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
       if (x.getAnonymousClassDeclaration != null) {
+        
+        //val constructor = compilationunit.createConstructor(constructors, memberFields, hasSuper)
+        //compilationunit.createClassDefinition(constructor, superClass, interfaces, methods, staticMethods, innerInterfaces, staticInnerClasses, staticFields)
+        
+        // TODO: 
+        
         val methods = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
         val properties = methods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList
         val binding = x.getAnonymousClassDeclaration.resolveBinding
         if (binding.getInterfaces.length > 0) {
-          new ObjectExpression(compilationunit.createInterfacesProperty(binding.getInterfaces) +: properties);
+          new ObjectExpression(compilationunit.createInterfacesProperty(binding.getInterfaces.map { x => new Identifier(x.getName) } toList) +: properties);
         } else new ObjectExpression(properties);
       } else 
         new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))

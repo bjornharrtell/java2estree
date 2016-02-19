@@ -15,15 +15,8 @@ object method {
       fromBlock(x.getBody)
     )
   
-  def checkInterfaceExpression(e: Expression, typeName: String) : LogicalExpression = {
-    val interfaces = new MemberExpression(e, "interfaces_")
-    val interfacesFunc = new CallExpression(interfaces)
-    
-    val indexOf = new MemberExpression(interfacesFunc, "indexOf")
-    val indexOfCall = new CallExpression(indexOf, List(new Identifier(typeName)))
-    
-    val interfaceCheck = new BinaryExpression(">", indexOfCall, new Literal(-1, "-1"))
-    new LogicalExpression("&&", interfaces, interfaceCheck)
+  def checkInterfaceExpression(e: Expression, typeName: String) : CallExpression = {
+    new CallExpression(new Identifier("hasInterface"), List(e, new Identifier(typeName)))
   } 
   
   def varToBinaryExpression(x: dom.SingleVariableDeclaration, i: Int) = {
@@ -101,15 +94,8 @@ object method {
         } }
         List(fromTypeOverloads(sorted))
       } else {
-        if (hasSuper && overloadedConstructor) {
-          val args = List(new SpreadElement(new Identifier("args")))
-          val call = new CallExpression(toArrowFunction(declarations.head), args)
-          if (returns) List(new ReturnStatement(call)) else List(new ExpressionStatement(call))
-        } else {
-          // TODO: should be able to work for overloaded constructors too
-          val statements = fromBlock(declarations.head.getBody).body.toList
-          argsToLet(declarations.head) +: statements
-        }
+        val statements = fromBlock(declarations.head.getBody).body.toList
+        argsToLet(declarations.head) +: statements
       }
     }
     
@@ -126,22 +112,12 @@ object method {
       val ifStatement = toIf(new IfStatement(test, new BlockStatement(cases.head._2), null), cases.tail.toBuffer)
       
       if (overloadedConstructor) {
-        val args = List(new RestElement(new Identifier("args")))
-        val overloaded = new ArrowFunctionExpression(args, new BlockStatement(List(ifStatement)), true, false)
-        val overloadedConst = new VariableDeclaration(
-          List(new VariableDeclarator(new Identifier("overloaded"), overloaded)), "const")
-        val overloadedApply = new MemberExpression("overloaded", "apply")
-        val overloadedApplyCall = new CallExpression(overloadedApply, List(new ThisExpression, new Identifier("args")))
-        val returnStatement = new ReturnStatement(overloadedApplyCall)
-        List(overloadedConst, returnStatement)
-        /* Fails with 'super' outside of function or class
         val params = List(new RestElement(new Identifier("args")))
-        var overloaded = new FunctionDeclaration(new Identifier("overloaded"), params, new BlockStatement(List(switch)))
+        var overloaded = new FunctionDeclaration(new Identifier("overloaded"), params, new BlockStatement(List(ifStatement)))
         val overloadedApply = new MemberExpression(new Identifier("overloaded"), new Identifier("apply"), false)
         val overloadedApplyCall = new CallExpression(overloadedApply, List(new ThisExpression, new Identifier("args")))
         val returnStatement = new ReturnStatement(overloadedApplyCall)
         List(overloaded, returnStatement)
-        */
       } else {
         List(ifStatement)
       }

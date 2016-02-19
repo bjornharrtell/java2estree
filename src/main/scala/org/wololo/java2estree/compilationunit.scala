@@ -200,7 +200,7 @@ object compilationunit extends LazyLogging {
     
     val interfacesProperty = createInterfacesProperty(interfaces)
     
-    val properties = methods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList ++ List(getClassProperty, interfacesProperty)
+    val properties = methods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList ++ List(interfacesProperty, getClassProperty)
     val membersObject = new ObjectExpression(properties)
     val prototype = new MemberExpression(name, "prototype")
     val extend = new ExpressionStatement(new CallExpression(new Identifier("extend"), List(prototype, membersObject)))

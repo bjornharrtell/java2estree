@@ -16,9 +16,10 @@ object method {
     )
   
   def checkInterfaceExpression(e: Expression, typeName: String) : LogicalExpression = {
-    val interfaces = new CallExpression(new MemberExpression(e, new Identifier("interfaces_"), false))
+    val interfaces = new MemberExpression(e, "interfaces_")
+    val interfacesFunc = new CallExpression(interfaces)
     
-    val indexOf = new MemberExpression(interfaces, new Identifier("indexOf"), false)
+    val indexOf = new MemberExpression(interfacesFunc, "indexOf")
     val indexOfCall = new CallExpression(indexOf, List(new Identifier(typeName)))
     
     val interfaceCheck = new BinaryExpression(">", indexOfCall, new Literal(-1, "-1"))

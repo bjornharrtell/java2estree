@@ -116,9 +116,9 @@ object compilationunit extends LazyLogging {
     
     val defaultStatements = if (hasSuper) {
       val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
-      val superConstructor = new MemberExpression(new MemberExpression(superClass, "prototype"), "constructor")
-      val superCall = if (hasSuper) new ExpressionStatement(new CallExpression(superConstructor, List())) else null
-      superCall +: memberFields
+      val apply = new MemberExpression(superClass, "apply")
+      val call = new CallExpression(apply, List(new ThisExpression))
+      new ExpressionStatement(call) +: memberFields
     } else {
       memberFields
     }
@@ -185,6 +185,7 @@ object compilationunit extends LazyLogging {
     
     val returnClassName = new ReturnStatement(new Identifier(td.getName.getIdentifier))
     val getClassFunc = new FunctionExpression(List(), new BlockStatement(List(returnClassName)), false)
+    val getClassProperty = new Property("getClass", getClassFunc)
     val getClass = new MethodDefinition(new Identifier("getClass"), getClassFunc, "method", false, false)
     
     val init = if (constructor == null) List(interfacesProperty) else List(constructor, interfacesProperty)
@@ -202,7 +203,7 @@ object compilationunit extends LazyLogging {
     
     // new ClassDeclaration(new Identifier(td.getName.getIdentifier), body, superClass) +: (innerInterfaces ++ staticInnerClasses ++ staticFieldStatements)
     
-    val properties = memberMethods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList :+ interfacesProperty
+    val properties = memberMethods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList ++ List(interfacesProperty, getClassProperty)
     val membersObject = new ObjectExpression(properties)
     val prototype = new MemberExpression(td.getName.getIdentifier, "prototype")
     val prototypeDefinition = if (hasSuperclass) {

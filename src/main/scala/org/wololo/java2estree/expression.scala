@@ -206,7 +206,7 @@ object expression {
       val t = if (x.getExpression == null && !dom.Modifier.isStatic(binding.getModifiers)) 
         new ThisExpression()
       else if (x.getExpression == null && dom.Modifier.isStatic(binding.getModifiers))
-        new Identifier(td.getName.getIdentifier)
+        new Identifier(binding.getDeclaringClass.getName)
       else
         toExpression(x.getExpression)
       val declaringClassName = binding.getDeclaringClass.getName

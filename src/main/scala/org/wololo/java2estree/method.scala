@@ -161,8 +161,8 @@ object method {
     val argsLength = new MemberExpression(new Identifier("args"), new Identifier("length"), false)
     val test = new BinaryExpression("===", argsLength, new Literal(m.parameters.size(), m.parameters.size().toString()))
     val consequent = new BlockStatement(argsToLet(m) +: fromBlock2(m.getBody).toList)
-    val call = new CallExpression(new Identifier(m.getName.getIdentifier), List(new SpreadElement(new Identifier("args"))))
-    
+    var apply = new MemberExpression(m.getName.getIdentifier, "apply")
+    val call = new CallExpression(apply, List(new ThisExpression, new Identifier("args")))
     val alternate = if (td.getSuperclassType != null) {
       val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
       val superCall = new MemberExpression(new MemberExpression(superClass, "prototype"), call)

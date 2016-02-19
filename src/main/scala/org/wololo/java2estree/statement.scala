@@ -82,8 +82,8 @@ object statement {
       new ExpressionStatement(call)
     case x: dom.SuperConstructorInvocation =>
       val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
-      val constructor = new MemberExpression(new MemberExpression(superClass, "prototype"), "constructor")
-      val call = new CallExpression(constructor, toExpressions(x.arguments))
+      val apply = new MemberExpression(superClass, "call")
+      val call = new CallExpression(apply, new ThisExpression() +: toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.Block => fromBlock(x)
     case x: dom.VariableDeclarationStatement =>

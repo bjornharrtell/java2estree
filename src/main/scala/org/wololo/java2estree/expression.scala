@@ -10,23 +10,23 @@ import method._
 object expression {
   val trunc = new MemberExpression("Math", "trunc")
   def truncCall(e: Expression) = new CallExpression(trunc, List(e))
-  
+
   def resolve(name: dom.Name) = if (name.isSimpleName())
     resolveSimpleName(name.asInstanceOf[dom.SimpleName])
   else
     resolveQualifiedName(name.asInstanceOf[dom.QualifiedName])
-  
+
   def resolveSimpleName(s: dom.SimpleName) = {
     if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
-    s.resolveBinding match { 
+    s.resolveBinding match {
       case b: dom.IVariableBinding if b.isParameter() =>
         new Identifier(s.getFullyQualifiedName)
       case b: dom.IVariableBinding if !b.isField() =>
         new Identifier(s.getFullyQualifiedName)
       case b: dom.IVariableBinding if !b.isParameter() =>
-        val member = if (dom.Modifier.isStatic(b.getModifiers)) 
+        val member = if (dom.Modifier.isStatic(b.getModifiers))
           new Identifier(b.getDeclaringClass.getName)
-        else 
+        else
           new ThisExpression()
         new MemberExpression(member, s.getFullyQualifiedName)
       case b: dom.ITypeBinding =>
@@ -35,10 +35,10 @@ object expression {
         new Identifier(s.getFullyQualifiedName)
     }
   }
-  
-  def resolveQualifiedName(q: dom.QualifiedName): Expression  = {
+
+  def resolveQualifiedName(q: dom.QualifiedName): Expression = {
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
-    q.getQualifier.resolveBinding match { 
+    q.getQualifier.resolveBinding match {
       case b: dom.IVariableBinding =>
         new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
       case b: dom.ITypeBinding =>
@@ -47,37 +47,36 @@ object expression {
         new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
     }
   }
-  
+
   def translateOp(op: String) = op match {
-    case "==" => "===" 
+    case "==" => "==="
     case "!=" => "!=="
-    case x => x
+    case x    => x
   }
-  
+
   def translateToken(token: String) =
     if (token.last == 'L')
-      token.substring(0, token.length-1)
+      token.substring(0, token.length - 1)
     else if (token.last == 'D')
-      token.substring(0, token.length-1)
+      token.substring(0, token.length - 1)
     else if (token.last == 'd')
-      token.substring(0, token.length-1)
+      token.substring(0, token.length - 1)
     else token
-  
+
   /**
    * Convert op and expressions from a dom.InfixExpression and truncate if needed.
    */
-  def toBinaryExpression(op: String, left: Expression, rest: Buffer[dom.Expression], shouldTrunc: Boolean)(implicit td: dom.TypeDeclaration) : Expression = {
-    
+  def toBinaryExpression(op: String, left: Expression, rest: Buffer[dom.Expression], shouldTrunc: Boolean)(implicit td: dom.TypeDeclaration): Expression = {
+
     def be = new BinaryExpression(op, left, toExpression(rest.get(0)))
     if (rest.length == 0)
       left
     else if (rest.length == 1)
       if (shouldTrunc) truncCall(be) else be
-    else
-      if (shouldTrunc) toBinaryExpression(op, truncCall(be), rest.tail, shouldTrunc)
-      else toBinaryExpression(op, be, rest.tail, shouldTrunc)
+    else if (shouldTrunc) toBinaryExpression(op, truncCall(be), rest.tail, shouldTrunc)
+    else toBinaryExpression(op, be, rest.tail, shouldTrunc)
   }
-  
+
   def toInstanceOf(e: Expression, typeName: String) = {
     if (typeName == "String" || typeName == "char") {
       val typeof = new UnaryExpression("typeof", true, e)
@@ -86,29 +85,29 @@ object expression {
       new BinaryExpression("instanceof", e, new Identifier(typeName))
     }
   }
-  
+
   def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
-    expressions collect { case x: dom.Expression => toExpression(x)}
-  
+    expressions collect { case x: dom.Expression => toExpression(x) }
+
   def create2DArrayExpression(x: Expression, y: Expression): CallExpression = {
     val xCall = new CallExpression(new Identifier("Array"), List(x))
     val yCall = new CallExpression(new Identifier("Array"), List(y))
     val yArrow = new ArrowFunctionExpression(List(), yCall, false, true)
-    
+
     val innerMember = new MemberExpression(xCall, "fill")
     val innerCall = new CallExpression(innerMember, List())
     val outerMember = new MemberExpression(innerCall, "map")
     new CallExpression(outerMember, List(yArrow))
   }
-  
+
   def toExpression(e: dom.Expression)(implicit td: dom.TypeDeclaration): Expression = e match {
-    case nl: dom.NullLiteral => new Literal(null, "null")
-    case x: dom.SimpleName => resolveSimpleName(x)
-    case x: dom.QualifiedName => resolveQualifiedName(x)
+    case nl: dom.NullLiteral   => new Literal(null, "null")
+    case x: dom.SimpleName     => resolveSimpleName(x)
+    case x: dom.QualifiedName  => resolveQualifiedName(x)
     case x: dom.ThisExpression => new ThisExpression()
     case x: dom.Assignment =>
       new AssignmentExpression(x.getOperator.toString,
-          toExpression(x.getLeftHandSide), toExpression(x.getRightHandSide))
+        toExpression(x.getLeftHandSide), toExpression(x.getRightHandSide))
     case x: dom.ParenthesizedExpression => toExpression(x.getExpression)
     case x: dom.BooleanLiteral =>
       new Literal(x.booleanValue, x.booleanValue.toString)
@@ -125,7 +124,7 @@ object expression {
       if (x.dimensions().length == 1) {
         val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
         new NewExpression(new Identifier("Array"), List(r))
-      } else if (x.dimensions().length>1) {
+      } else if (x.dimensions().length > 1) {
         val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
         val c = toExpression(x.dimensions().get(1).asInstanceOf[dom.Expression])
         create2DArrayExpression(r, c)
@@ -158,7 +157,7 @@ object expression {
       val initial = if (shouldTrunc) truncCall(e) else e
       if (x.extendedOperands.size() > 0)
         toBinaryExpression(op, initial, x.extendedOperands collect { case x: dom.Expression => x }, shouldTrunc)
-      else 
+      else
         initial
     case x: dom.InstanceofExpression =>
       val left = toExpression(x.getLeftOperand)
@@ -173,30 +172,24 @@ object expression {
         toExpression(x.getExpression)
     case x: dom.ClassInstanceCreation =>
       if (x.getAnonymousClassDeclaration != null) {
-        
-        //val constructor = compilationunit.createConstructor(constructors, memberFields, hasSuper)
-        //compilationunit.createClassDefinition(constructor, superClass, interfaces, methods, staticMethods, innerInterfaces, staticInnerClasses, staticFields)
-        
-        // TODO: 
-        
         val methods = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
         val properties = methods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList
         val binding = x.getAnonymousClassDeclaration.resolveBinding
         if (binding.getInterfaces.length > 0) {
           new ObjectExpression(compilationunit.createInterfacesProperty(binding.getInterfaces.map { x => new Identifier(x.getName) } toList) +: properties);
         } else new ObjectExpression(properties);
-      } else 
+      } else
         new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
       x.getExpression match {
         case m: dom.ThisExpression => new MemberExpression(new ThisExpression(), x.getName.getIdentifier)
-        case m: dom.Expression => new MemberExpression(toExpression(x.getExpression), x.getName.getIdentifier)
+        case m: dom.Expression     => new MemberExpression(toExpression(x.getExpression), x.getName.getIdentifier)
       }
     case x: dom.MethodInvocation =>
       if (x.resolveMethodBinding == null)
         throw new RuntimeException("Cannot resolve binding of MethodInvocation when parsing " + x + " with parent " + x.getParent)
       val binding = x.resolveMethodBinding
-      val t = if (x.getExpression == null && !dom.Modifier.isStatic(binding.getModifiers)) 
+      val t = if (x.getExpression == null && !dom.Modifier.isStatic(binding.getModifiers))
         new ThisExpression()
       else if (x.getExpression == null && dom.Modifier.isStatic(binding.getModifiers))
         new Identifier(binding.getDeclaringClass.getName)

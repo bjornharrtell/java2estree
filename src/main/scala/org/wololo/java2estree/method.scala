@@ -29,7 +29,7 @@ object method {
     else if (typeName == "boolean")
       new BinaryExpression("===", new UnaryExpression("typeof", true, identifier), new Literal("boolean", "\"boolean\""))
     else if (typeName == "int")
-      new MemberExpression(new Identifier("Number"), new CallExpression(new Identifier("isInteger"), List(identifier)), false)
+      new MemberExpression("Number", new CallExpression(new Identifier("isInteger"), List(identifier)))
     else if (typeName == "double")
       new BinaryExpression("===", new UnaryExpression("typeof", true, identifier), new Literal("number", "\"number\""))
     else if (isInterface)
@@ -49,20 +49,6 @@ object method {
     new VariableDeclaration(
       declarators,
       "let"
-    )
-  }
-  
-  def toArrowFunction(md: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) = {
-    val bodyStatements = fromBlock(md.getBody).body.toList
-    var patterns = fromParameters(md.parameters).toList
-    val statements = if (patterns.length > 0) 
-      argsToLet(patterns) +: bodyStatements
-    else bodyStatements
-      
-    new ArrowFunctionExpression(
-      List(),
-      new BlockStatement(statements),
-      false
     )
   }
   

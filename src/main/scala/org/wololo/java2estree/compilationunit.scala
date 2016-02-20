@@ -103,7 +103,7 @@ object compilationunit extends LazyLogging {
     val statements = fromOverloadedMethodDeclarations(constructors, true)
     
     // TODO: tried to remove initial super call if one exist later but that causes issues with field init
-    /*var hasSuper2 = hasSuper
+    var hasSuper2 = hasSuper
     if (constructors.length>0) {
       constructors.head.accept(new dom.ASTVisitor() {
         override def visit(node: SuperConstructorInvocation): Boolean = {
@@ -111,9 +111,9 @@ object compilationunit extends LazyLogging {
           true
         }
       })
-    }*/
+    }
     
-    val defaultStatements = if (hasSuper) {
+    val defaultStatements = if (hasSuper2) {
       val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
       val apply = new MemberExpression(superClass, "apply")
       val call = new CallExpression(apply, List(new ThisExpression))

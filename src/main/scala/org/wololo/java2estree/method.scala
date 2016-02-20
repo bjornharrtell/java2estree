@@ -66,7 +66,7 @@ object method {
     )
   }
   
-  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean, hasSuper: Boolean = false, overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) = {
+  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean, hasSuper: Boolean = false)(implicit td: dom.TypeDeclaration) = {
     def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): List[Statement] = {
       def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
         if (mds.size > 0) {
@@ -79,7 +79,7 @@ object method {
           else 
             es(0)
           
-          val consequent = if (hasSuper && overloadedConstructor) {
+          val consequent = if (hasSuper) {
             val args = List(new Identifier("arguments"))
             val call = new CallExpression(toArrowFunction(mds.head), args)
             new BlockStatement(List(new ReturnStatement(call)))
@@ -124,17 +124,7 @@ object method {
     else {
       val test = new BinaryExpression("===", new Identifier("arguments.length"), cases.head._1)
       val ifStatement = toIf(new IfStatement(test, new BlockStatement(cases.head._2), null), cases.tail.toBuffer)
-      
-      if (overloadedConstructor) {
-        val params = List()
-        var overloaded = new FunctionDeclaration(new Identifier("overloaded"), params, new BlockStatement(List(ifStatement)))
-        val overloadedApply = new MemberExpression(new Identifier("overloaded"), new Identifier("apply"), false)
-        val overloadedApplyCall = new CallExpression(overloadedApply, List(new ThisExpression, new Identifier("arguments")))
-        val returnStatement = new ReturnStatement(overloadedApplyCall)
-        List(overloaded, returnStatement)
-      } else {
-        List(ifStatement)
-      }
+      List(ifStatement)
     }    
   }
   
@@ -182,7 +172,7 @@ object method {
     else false
   }
 
-  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration], overloadedConstructor: Boolean = false)(implicit td: dom.TypeDeclaration) : FunctionDeclaration = {
+  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration) : FunctionDeclaration = {
     // check if single method has non overrided overload
     val binding = x.head.resolveBinding
     val superClass = binding.getDeclaringClass.getSuperclass
@@ -209,7 +199,7 @@ object method {
       new FunctionDeclaration(
         new Identifier(x.head.getName.getIdentifier),
         List(),
-        new BlockStatement(fromOverloadedMethodDeclarations(x, true, overloadedConstructor)),
+        new BlockStatement(fromOverloadedMethodDeclarations(x, true)),
         false
       )
     }

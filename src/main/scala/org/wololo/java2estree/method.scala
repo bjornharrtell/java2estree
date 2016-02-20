@@ -66,7 +66,7 @@ object method {
     )
   }
   
-  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean, hasSuper: Boolean = false)(implicit td: dom.TypeDeclaration) = {
+  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean)(implicit td: dom.TypeDeclaration) = {
     def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): List[Statement] = {
       def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]) : Statement = {
         if (mds.size > 0) {
@@ -79,18 +79,12 @@ object method {
           else 
             es(0)
           
-          val consequent = if (hasSuper) {
-            val args = List(new Identifier("arguments"))
-            val call = new CallExpression(toArrowFunction(mds.head), args)
-            new BlockStatement(List(new ReturnStatement(call)))
-          } else {
-            val bodyStatements = fromBlock(mds.head.getBody).body.toList
-            var patterns = fromParameters(mds.head.parameters).toList
-            val statements = if (patterns.length > 0) 
-              argsToLet(patterns) +: bodyStatements
-            else bodyStatements
-            new BlockStatement(statements)
-          }
+          val bodyStatements = fromBlock(mds.head.getBody).body.toList
+          var patterns = fromParameters(mds.head.parameters).toList
+          val statements = if (patterns.length > 0) 
+            argsToLet(patterns) +: bodyStatements
+          else bodyStatements
+          val consequent = new BlockStatement(statements)
           new IfStatement(test, consequent, fromTypeOverloads(mds.tail))
         } else null
       }
@@ -113,14 +107,14 @@ object method {
       }
     }
     
-    
     val cases = x.groupBy({ _.parameters.length }).toList.sortBy(_._1).collect({
       case (argsCount, methods) => (new Literal(argsCount, argsCount.toString), fromSameArgLength(methods))
     })
     
-    if (cases.size == 0) {
+    if (cases.size == 0)
       List()
-    }
+    //else if (cases.size == 1)
+    //  cases.head._2
     else {
       val test = new BinaryExpression("===", new Identifier("arguments.length"), cases.head._1)
       val ifStatement = toIf(new IfStatement(test, new BlockStatement(cases.head._2), null), cases.tail.toBuffer)

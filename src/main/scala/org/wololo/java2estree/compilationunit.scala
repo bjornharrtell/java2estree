@@ -100,7 +100,7 @@ object compilationunit extends LazyLogging {
   def createConstructorBody(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean, hasOverloads: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] = {
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
 
-    val statements = fromOverloadedMethodDeclarations(constructors, true, hasSuper)
+    val statements = fromOverloadedMethodDeclarations(constructors, true)
     
     // TODO: tried to remove initial super call if one exist later but that causes issues with field init
     /*var hasSuper2 = hasSuper

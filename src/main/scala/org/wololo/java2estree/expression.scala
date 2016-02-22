@@ -123,7 +123,8 @@ object expression {
     case x: dom.ArrayCreation =>
       if (x.dimensions().length == 1) {
         val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
-        new NewExpression(new Identifier("Array"), List(r))
+        val fill = new MemberExpression(new NewExpression(new Identifier("Array"), List(r)), "fill")
+        new CallExpression(fill, List(new Literal(null, "null")))
       } else if (x.dimensions().length > 1) {
         val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
         val c = toExpression(x.dimensions().get(1).asInstanceOf[dom.Expression])

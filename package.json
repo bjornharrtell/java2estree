@@ -8,6 +8,6 @@
   "author": "Björn Harrtell",
   "license": "MIT",
   "dependencies": {
-    "astring": "0.4.10"
+    "astring": "0.6.1"
   }
 }

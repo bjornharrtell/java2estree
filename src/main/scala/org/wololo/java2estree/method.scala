@@ -181,13 +181,17 @@ object method {
     }
   }
 
-  def fromFieldDeclarationMember(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) =
+  def fromFieldDeclarationMember(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = {
+    val isStatic = dom.Modifier.isStatic(declaration.getModifiers)
+    val isPrivate = dom.Modifier.isPrivate(declaration.getModifiers)
+    val prefix = if (isPrivate) "_" else "" 
     declaration.fragments collect {
-      case field: dom.VariableDeclarationFragment if !dom.Modifier.isStatic(declaration.getModifiers) =>
+      case field: dom.VariableDeclarationFragment if !isStatic =>
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-          new ThisExpression(), field.getName.getIdentifier),
+          new ThisExpression(), prefix + field.getName.getIdentifier),
           toExpression(field.getInitializer)))
     }
+  }
 
   def fromFieldDeclarationStatic(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = {
     declaration.fragments collect {

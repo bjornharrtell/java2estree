@@ -19,7 +19,8 @@ object expression {
   def resolveSimpleName(s: dom.SimpleName) = {
     if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
     val b = s.resolveBinding
-    val priv = dom.Modifier.isPrivate(b.getModifiers)
+    val isPrivate = dom.Modifier.isPrivate(b.getModifiers)
+    val isStatic = dom.Modifier.isStatic(b.getModifiers)
     b match {
       case b: dom.IVariableBinding if b.isParameter() =>
         new Identifier(s.getFullyQualifiedName)
@@ -30,7 +31,8 @@ object expression {
           new Identifier(b.getDeclaringClass.getName)
         else
           new ThisExpression()
-        new MemberExpression(member, s.getFullyQualifiedName)
+        var prefix = if (isPrivate && !isStatic) "_" else ""
+        new MemberExpression(member, prefix + s.getFullyQualifiedName)
       case b: dom.ITypeBinding =>
         new Identifier(s.getFullyQualifiedName)
       case b: dom.IPackageBinding =>
@@ -42,8 +44,10 @@ object expression {
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
     val b = q.getQualifier.resolveBinding
     
-    //val priv = dom.Modifier.isPrivate(b2.getModifiers)
+    val priv = dom.Modifier.isPrivate(q.resolveBinding.getModifiers)
     b match {
+      //case b: dom.IVariableBinding if b.isField() && priv =>
+      //  new MemberExpression(resolve(q.getQualifier), "_" + q.getName.getIdentifier)
       case b: dom.IVariableBinding =>
         new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
       case b: dom.ITypeBinding =>
@@ -187,9 +191,12 @@ object expression {
       } else
         new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
     case x: dom.FieldAccess =>
+      val isStatic = dom.Modifier.isStatic(x.resolveFieldBinding.getModifiers)
+      val isPrivate = dom.Modifier.isPrivate(x.resolveFieldBinding.getModifiers)
+      val prefix = if (isPrivate && !isStatic) "_" else "" 
       x.getExpression match {
-        case m: dom.ThisExpression => new MemberExpression(new ThisExpression(), x.getName.getIdentifier)
-        case m: dom.Expression     => new MemberExpression(toExpression(x.getExpression), x.getName.getIdentifier)
+        case m: dom.ThisExpression => new MemberExpression(new ThisExpression(), prefix + x.getName.getIdentifier)
+        case m: dom.Expression     => new MemberExpression(toExpression(x.getExpression), prefix + x.getName.getIdentifier)
       }
     case x: dom.MethodInvocation =>
       if (x.resolveMethodBinding == null)

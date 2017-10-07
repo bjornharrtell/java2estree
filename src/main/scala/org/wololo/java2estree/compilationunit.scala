@@ -9,7 +9,6 @@ import method._
 import importdeclaration._
 import com.typesafe.scalalogging.LazyLogging
 import org.eclipse.jdt.core.dom.Modifier
-import com.google.common.io.Files
 import java.io.File
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -94,9 +93,11 @@ object compilationunit extends LazyLogging {
       false)
   }
 
-  def createConstructorBody(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] = {
-    val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
-
+  def createConstructorBody(
+      constructors: Array[dom.MethodDeclaration],
+      memberFields: Array[ExpressionStatement],
+      hasSuper: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] = {
+    
     val statements = fromOverloadedMethodDeclarations(constructors, true)
 
     var hasExplicitSuperCall = hasSuper
@@ -226,7 +227,10 @@ object compilationunit extends LazyLogging {
 
     val staticFieldStatements = staticFields.map(new ExpressionStatement(_))
 
-    classDefinition ++ staticMethodAssignments ++ innerInterfaces ++ innerInterfacesClassAssignments ++ staticInnerClasses.flatten.toList ++ staticInnerClassAssignments ++ staticFieldStatements
+    classDefinition ++ 
+    staticMethodAssignments ++ 
+    innerInterfaces ++
+    innerInterfacesClassAssignments ++ staticInnerClasses.flatten.toList ++ staticInnerClassAssignments ++ staticFieldStatements
   }
 
 }

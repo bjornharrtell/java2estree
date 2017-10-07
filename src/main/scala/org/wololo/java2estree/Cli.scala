@@ -9,12 +9,13 @@ import org.eclipse.jface.text.Document
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.google.common.io.CharStreams
 import com.typesafe.scalalogging.LazyLogging
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+import scala.concurrent.Channel
+import java.nio.channels.Channels
 
 object Cli extends App with LazyLogging {
   
@@ -52,7 +53,6 @@ object Cli extends App with LazyLogging {
       return
     }
     
-    // if (file.getName != "StringUtil") return;
     
     logger.info(s"Processing ${file.getPath}")
     parser.setResolveBindings(true)
@@ -60,9 +60,9 @@ object Cli extends App with LazyLogging {
     parser.setStatementsRecovery(true)
     parser.setEnvironment(null, Array(root.toString), null, true)
     val name = file.getName.split('.')(0)
-    val doc = new Document(CharStreams.toString(new FileReader(file)))
     parser.setUnitName(file.getName)
-    parser.setSource(doc.get.toCharArray)
+    val bytes = Files.readAllBytes(file.toPath()).map(b => b.toChar)
+    parser.setSource(bytes)
     val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
     val program = compilationunit.fromCompilationUnit(cu, root, file.toPath, name)
     if (program == null) return

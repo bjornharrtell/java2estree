@@ -18,7 +18,9 @@ object expression {
 
   def resolveSimpleName(s: dom.SimpleName) = {
     if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
-    s.resolveBinding match {
+    val b = s.resolveBinding
+    val priv = dom.Modifier.isPrivate(b.getModifiers)
+    b match {
       case b: dom.IVariableBinding if b.isParameter() =>
         new Identifier(s.getFullyQualifiedName)
       case b: dom.IVariableBinding if !b.isField() =>
@@ -38,8 +40,10 @@ object expression {
 
   def resolveQualifiedName(q: dom.QualifiedName): Expression = {
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
-    // val priv = dom.Modifier.isPrivate(b.getModifiers)
-    q.getQualifier.resolveBinding match {
+    val b = q.getQualifier.resolveBinding
+    
+    //val priv = dom.Modifier.isPrivate(b2.getModifiers)
+    b match {
       case b: dom.IVariableBinding =>
         new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
       case b: dom.ITypeBinding =>

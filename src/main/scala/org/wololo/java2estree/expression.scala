@@ -38,6 +38,7 @@ object expression {
 
   def resolveQualifiedName(q: dom.QualifiedName): Expression = {
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
+    // val priv = dom.Modifier.isPrivate(b.getModifiers)
     q.getQualifier.resolveBinding match {
       case b: dom.IVariableBinding =>
         new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)

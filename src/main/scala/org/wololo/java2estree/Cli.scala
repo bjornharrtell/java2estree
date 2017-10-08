@@ -53,7 +53,6 @@ object Cli extends App with LazyLogging {
       return
     }
     
-    
     logger.info(s"Processing ${file.getPath}")
     parser.setResolveBindings(true)
     parser.setBindingsRecovery(true)

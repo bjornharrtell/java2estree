@@ -12,11 +12,11 @@ object method {
   def toFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
     new FunctionExpression(
       fromParameters(x.parameters),
-      fromBlock(x.getBody))
+      fromBlock(x.getBody)
+    )
 
-  def checkInterfaceExpression(e: Expression, typeName: String): CallExpression = {
+  def checkInterfaceExpression(e: Expression, typeName: String): CallExpression =
     new CallExpression(new Identifier("hasInterface"), List(e, new Identifier(typeName)))
-  }
 
   def varToBinaryExpression(x: dom.SingleVariableDeclaration, i: Int) = {
     val identifier = new MemberExpression(new Identifier("arguments"), new Literal(i, i.toString), true)
@@ -43,9 +43,7 @@ object method {
         new VariableDeclarator(e, new MemberExpression(new Identifier("arguments"), new Literal(i, i.toString()), true))
     })
 
-    new VariableDeclaration(
-      declarators,
-      "let")
+    new VariableDeclaration(declarators, "let")
   }
 
   def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean)(implicit td: dom.TypeDeclaration) = {
@@ -74,8 +72,7 @@ object method {
       if (declarations.size > 1) {
         // TODO: Not sure this follows https://docs.oracle.com/javase/specs/jls/se7/html/jls-15.html#jls-15.12.2.5
         // TODO: Consider all params
-        var sorted = declarations.toList.sortWith { (md1, md2) =>
-          {
+        var sorted = declarations.toList.sortWith { (md1, md2) => {
             val b1 = md1.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
             val b2 = md2.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
             b1.isSubTypeCompatible(b2)
@@ -85,8 +82,7 @@ object method {
       } else {
         val bodyStatements = fromBlock(declarations.head.getBody).body.toList
         var patterns = fromParameters(declarations.head.parameters).toList
-        if (patterns.length > 0)
-          argsToLet(patterns) +: bodyStatements
+        if (patterns.length > 0) argsToLet(patterns) +: bodyStatements
         else bodyStatements
       }
     }
@@ -95,10 +91,8 @@ object method {
       case (argsCount, methods) => (new Literal(argsCount, argsCount.toString), fromSameArgLength(methods))
     })
 
-    if (cases.size == 0)
-      List()
-    else if (cases.size == 1)
-      cases.head._2
+    if (cases.size == 0) List()
+    else if (cases.size == 1) cases.head._2
     else {
       val test = new BinaryExpression("===", new Identifier("arguments.length"), cases.head._1)
       val ifStatement = toIf(new IfStatement(test, new BlockStatement(cases.head._2), null), cases.tail.toBuffer)
@@ -171,13 +165,15 @@ object method {
         new Identifier(x.head.getName.getIdentifier),
         params,
         block,
-        false)
+        false
+      )
     } else {
       new FunctionDeclaration(
         new Identifier(x.head.getName.getIdentifier),
         List(),
         new BlockStatement(fromOverloadedMethodDeclarations(x, true)),
-        false)
+        false
+      )
     }
   }
 
@@ -188,8 +184,10 @@ object method {
     declaration.fragments collect {
       case field: dom.VariableDeclarationFragment if !isStatic =>
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
-          new ThisExpression(), prefix + field.getName.getIdentifier),
-          toExpression(field.getInitializer)))
+            new ThisExpression(), prefix + field.getName.getIdentifier
+          ),
+          toExpression(field.getInitializer)
+        ))
     }
   }
 

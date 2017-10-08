@@ -20,6 +20,7 @@ object expression extends LazyLogging {
     if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
     val b = s.resolveBinding
     val isPrivate = dom.Modifier.isPrivate(b.getModifiers)
+    val isProtected = dom.Modifier.isProtected(b.getModifiers)
     val isStatic = dom.Modifier.isStatic(b.getModifiers)
     val name = s.getFullyQualifiedName
     val identifier = new Identifier(name)
@@ -31,7 +32,7 @@ object expression extends LazyLogging {
           new Identifier(b.getDeclaringClass.getName)
         else
           new ThisExpression()
-        var prefix = if (isPrivate && !isStatic) "_" else ""
+        var prefix = if ((isPrivate || isProtected) && !isStatic) "_" else ""
         new MemberExpression(member, prefix + s.getFullyQualifiedName)
       case b: dom.ITypeBinding => identifier
       case b: dom.IPackageBinding => identifier
@@ -43,8 +44,9 @@ object expression extends LazyLogging {
     val b = q.getQualifier.resolveBinding
     val b2 = q.resolveBinding
     val isPrivate = dom.Modifier.isPrivate(b2.getModifiers)
+    val isProtected = dom.Modifier.isProtected(b2.getModifiers)
     val isStatic = dom.Modifier.isStatic(b2.getModifiers)
-    var prefix = if (isPrivate && !isStatic) "_" else ""
+    var prefix = if ((isPrivate || isProtected) && !isStatic) "_" else ""
     b match {
       case b: dom.IVariableBinding =>
         new MemberExpression(resolve(q.getQualifier), prefix + q.getName.getIdentifier)
@@ -190,9 +192,11 @@ object expression extends LazyLogging {
         } else
           new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
       case x: dom.FieldAccess =>
-        val isStatic = dom.Modifier.isStatic(x.resolveFieldBinding.getModifiers)
-        val isPrivate = dom.Modifier.isPrivate(x.resolveFieldBinding.getModifiers)
-        val prefix = if (isPrivate && !isStatic) "_" else "" 
+        val b = x.resolveFieldBinding
+        val isStatic = dom.Modifier.isStatic(b.getModifiers)
+        val isPrivate = dom.Modifier.isPrivate(b.getModifiers)
+        val isProtected = dom.Modifier.isProtected(b.getModifiers)
+        val prefix = if ((isPrivate || isProtected) && !isStatic) "_" else "" 
         x.getExpression match {
           case m: dom.ThisExpression => new MemberExpression(new ThisExpression(), prefix + x.getName.getIdentifier)
           case m: dom.Expression     => new MemberExpression(toExpression(x.getExpression), prefix + x.getName.getIdentifier)

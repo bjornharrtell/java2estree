@@ -179,8 +179,9 @@ object method {
 
   def fromFieldDeclarationMember(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = {
     val isStatic = dom.Modifier.isStatic(declaration.getModifiers)
+    val isProtected = dom.Modifier.isProtected(declaration.getModifiers)
     val isPrivate = dom.Modifier.isPrivate(declaration.getModifiers)
-    val prefix = if (isPrivate) "_" else "" 
+    val prefix = if (isPrivate || isProtected) "_" else "" 
     declaration.fragments collect {
       case field: dom.VariableDeclarationFragment if !isStatic =>
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(

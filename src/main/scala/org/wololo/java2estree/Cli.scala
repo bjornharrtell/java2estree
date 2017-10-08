@@ -22,10 +22,10 @@ object Cli extends App with LazyLogging {
   val skipList = List(
     "/jts/awt/",
     "/jts/io/",
-    "/jts/geom/prep/",
+    "/jts/geom/impl/PackedCoordinateSequence",
 	  "/jts/util/Debug.java",
 	  "/jts/util/Stopwatch.java",
-	  "/jts/geom/Geometry.java",
+	  //"/jts/geom/Geometry.java",
 	  "/jts/index/quadtree/DoubleBits.java",
 	  "/jts/geom/TopologyException.java"
   ).map(e => ".*" + e + ".*")

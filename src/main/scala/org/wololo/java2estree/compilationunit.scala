@@ -154,7 +154,9 @@ object compilationunit extends LazyLogging {
         case (name, methods) => fromMethodDeclarations(methods)
       }
 
-    val innerInterfaces = types.filter(x => x.isInterface()).map { x => new FunctionDeclaration(new Identifier(x.getName.getIdentifier), List(), new BlockStatement(List())) }.toList
+    val innerInterfaces = types.filter(x => x.isInterface()).map {
+        x => new FunctionDeclaration(new Identifier(x.getName.getIdentifier), List(), new BlockStatement(List()))
+      }.toList
 
     // TODO: Member inner classes should probably defined as getters
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
@@ -162,7 +164,7 @@ object compilationunit extends LazyLogging {
       .filter(x => Modifier.isStatic(x.getModifiers) && !x.isInterface)
       .map { x => fromTypeDeclaration(x) }
 
-    val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getName) } toList
+    val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getTypeDeclaration.getName) } toList
 
     val superClass = if (hasSuperclass) {
       val superClassType = td.getSuperclassType.asInstanceOf[dom.SimpleType]

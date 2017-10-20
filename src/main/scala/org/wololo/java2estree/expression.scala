@@ -187,10 +187,15 @@ object expression extends LazyLogging {
           val properties = methods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList
           val binding = x.getAnonymousClassDeclaration.resolveBinding
           if (binding.getInterfaces.length > 0) {
-            new ObjectExpression(compilationunit.createInterfacesProperty(binding.getInterfaces.map { x => new Identifier(x.getName) } toList) +: properties);
-          } else new ObjectExpression(properties);
-        } else
+            var interfaces = binding.getInterfaces.map { x => new Identifier(x.getName) } toList
+            var interfacesProperty = compilationunit.createInterfacesProperty(interfaces)
+            new ObjectExpression(interfacesProperty +: properties);
+          } else {
+            new ObjectExpression(properties);
+          }
+        } else {
           new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
+        }
       case x: dom.FieldAccess =>
         val b = x.resolveFieldBinding
         val isStatic = dom.Modifier.isStatic(b.getModifiers)

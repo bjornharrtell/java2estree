@@ -25,7 +25,7 @@ object Cli extends App with LazyLogging {
     "/jts/geom/impl/PackedCoordinateSequence",
 	  "/jts/util/Debug.java",
 	  "/jts/util/Stopwatch.java",
-	  //"/jts/geom/Geometry.java",
+	  "/jts/geom/Geometry.java",
 	  "/jts/index/quadtree/DoubleBits.java",
 	  "/jts/geom/TopologyException.java"
   ).map(e => ".*" + e + ".*")
@@ -48,6 +48,8 @@ object Cli extends App with LazyLogging {
   }
   
   def convert(file: File) {
+    //if (!file.getPath.matches(".*/jts/index/intervalrtree/SortedPackedIntervalRTree.java.*")) return 
+    
     if (skipList.find( e => file.getPath.matches(e) ).nonEmpty) {
       logger.info(s"Skipping ${file.getPath}")
       return

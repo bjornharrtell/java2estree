@@ -45,11 +45,19 @@ object compilationunit extends LazyLogging {
     mapper.registerModule(DefaultScalaModule)
     val tree = mapper.valueToTree[JsonNode](types)
 
-    def countIdentifier(name: String) = {
-      tree.findParents("type").filter {
-        x => x.get("type").asText() == "Identifier" && x.get("name").asText() == name
-      }.size
+    def compareIdentifier(node: JsonNode, name: String): Boolean = {
+      if (node.get("type").asText() != "Identifier") return false
+      var nodeName = node.get("name").asText()
+      
+      var parts = nodeName.split('.')
+      if (parts.length > 1) 
+        return parts(0) == name
+      else
+        return nodeName == name
     }
+    
+    def countIdentifier(name: String) =
+      tree.findParents("type").filter(compareIdentifier(_, name)).size
 
     val packageImports = if (cu.getPackage != null)
       importsFromName(cu.getPackage.getName.getFullyQualifiedName, root, name)

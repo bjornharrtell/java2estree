@@ -178,12 +178,13 @@ object method {
   }
 
   def fromFieldDeclarationMember(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = {
+    val isInterface = td.isInterface()
     val isStatic = dom.Modifier.isStatic(declaration.getModifiers)
     val isProtected = dom.Modifier.isProtected(declaration.getModifiers)
     val isPrivate = dom.Modifier.isPrivate(declaration.getModifiers)
-    val prefix = if (isPrivate || isProtected) "_" else "" 
+    val prefix = if (isPrivate || isProtected) "_" else ""
     declaration.fragments collect {
-      case field: dom.VariableDeclarationFragment if !isStatic =>
+      case field: dom.VariableDeclarationFragment if (!isStatic && !isInterface) =>
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
             new ThisExpression(), prefix + field.getName.getIdentifier
           ),
@@ -193,8 +194,10 @@ object method {
   }
 
   def fromFieldDeclarationStatic(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = {
+    val isInterface = td.isInterface()
+    var isStatic = dom.Modifier.isStatic(declaration.getModifiers)
     declaration.fragments collect {
-      case field: dom.VariableDeclarationFragment if dom.Modifier.isStatic(declaration.getModifiers) => {
+      case field: dom.VariableDeclarationFragment if (isStatic || isInterface) => {
         if (field.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of VariableDeclarationFragment when parsing " + field + " with parent " + field.getParent)
         val left = new MemberExpression(td.getName.getIdentifier, field.getName.getIdentifier)
         val right = toExpression(field.getInitializer)

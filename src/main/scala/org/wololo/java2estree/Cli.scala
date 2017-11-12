@@ -48,7 +48,9 @@ object Cli extends App with LazyLogging {
   }
   
   def convert(file: File) {
-    //if (!file.getPath.matches(".*/jts/index/intervalrtree/SortedPackedIntervalRTree.java.*")) return 
+    //if (!file.getPath.matches(".*/jts/index/intervalrtree/SortedPackedIntervalRTree.java.*")) return
+    //if (!file.getPath.matches(".*PrecisionReducerCoordinateOperation.*")) return
+    //if (!file.getPath.matches(".*GeometryEditor.*")) return
     
     if (skipList.find( e => file.getPath.matches(e) ).nonEmpty) {
       logger.info(s"Skipping ${file.getPath}")

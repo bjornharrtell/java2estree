@@ -147,10 +147,13 @@ object compilationunit extends LazyLogging {
     val constructors = methods filter { m => m.isConstructor() }
     val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
     val staticFields = td.getFields map { fromFieldDeclarationStatic(_) } flatten
-
+    
     val hasSuperclass = td.getSuperclassType != null
 
     val constructor = createConstructor(constructors, memberFields, hasSuperclass)
+    
+    val left = new MemberExpression(td.getName.getIdentifier, new Identifier("constructor_"))
+    val staticConstructor = new AssignmentExpression("=", left, constructor)
 
     val memberMethods = methods
       .filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers))
@@ -187,7 +190,7 @@ object compilationunit extends LazyLogging {
       } else new Identifier(superClassName)
     } else null
 
-    createClassDefinition(constructor, superClass, interfaces, memberMethods, staticMethods, innerInterfaces, staticInnerClasses, staticFields)
+    createClassDefinition(constructor, superClass, interfaces, memberMethods, staticMethods, innerInterfaces, staticInnerClasses, staticConstructor +: staticFields)
   }
 
   def createClassDefinition(
@@ -216,14 +219,14 @@ object compilationunit extends LazyLogging {
         new FunctionExpression(x.params, x.body), "method", false, true) }
     
     val apply = new MemberExpression("constructor_", "apply")
-    var apply2 = new MemberExpression(new ThisExpression(), apply)
+    var apply2 = new MemberExpression(name, apply)
     val call = new ExpressionStatement(new CallExpression(apply2, List(new ThisExpression, new Identifier("arguments"))))
-    val constructorExpression = new FunctionExpression(null, new BlockStatement(List(call)), false)
+    var superCall = new ExpressionStatement(new CallExpression(new Super, null))
+    var statements = if (superClass == null) List(call) else List(superCall, call)
+    val constructorExpression = new FunctionExpression(null, new BlockStatement(statements), false)
     
     val constructorMethod = new MethodDefinition(new Identifier("constructor"), constructorExpression, "constructor", false, false)
-    // TODO: need to differentiate overloaded "constructor" if superclass
-    val constructorMethod_ = new MethodDefinition(new Identifier("constructor_"), constructor, "method", false, false)
-    val classBody = new ClassBody(List(constructorMethod, constructorMethod_) ++ classMembersStatic ++ classMembers :+ getClassProperty :+ interfacesProperty)
+    val classBody = new ClassBody(List(constructorMethod) ++ classMembersStatic ++ classMembers :+ getClassProperty :+ interfacesProperty)
     val classDefinition = new ClassDeclaration(name, classBody, superClass)
     
     val innerInterfacesClassAssignments = innerInterfaces.map { x =>

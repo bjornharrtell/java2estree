@@ -76,11 +76,13 @@ object statement {
     case x: dom.DoStatement =>
       new DoWhileStatement(fromStatement(x.getBody), toExpression(x.getExpression))
     case x: dom.ConstructorInvocation =>
-      val overloadedCall = new MemberExpression(new ThisExpression(), new MemberExpression(new Identifier("constructor_"), new Identifier("call")))
+      val name = new Identifier(td.getName.getIdentifier)
+      val overloadedCall = new MemberExpression(name, new MemberExpression(new Identifier("constructor_"), new Identifier("call")))
       val call = new CallExpression(overloadedCall, new ThisExpression +: toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.SuperConstructorInvocation =>
-      val apply = new MemberExpression(new Super(), new MemberExpression(new Identifier("constructor_"), "call"))
+      val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
+      val apply = new MemberExpression(superClass, new MemberExpression(new Identifier("constructor_"), "call"))
       val call = new CallExpression(apply, new ThisExpression() +: toExpressions(x.arguments))
       new ExpressionStatement(call)
     case x: dom.Block => fromBlock(x)

@@ -27,7 +27,8 @@ object Cli extends App with LazyLogging {
 	  "/jts/util/Stopwatch.java",
 	  "/jts/geom/Geometry.java",
 	  "/jts/index/quadtree/DoubleBits.java",
-	  "/jts/geom/TopologyException.java"
+	  "/jts/geom/TopologyException.java",
+	  "/jts/precision/CommonBits.java"
   ).map(e => ".*" + e + ".*")
   
   val root = Paths.get(args(0))

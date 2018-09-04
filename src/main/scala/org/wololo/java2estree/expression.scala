@@ -184,14 +184,14 @@ object expression extends LazyLogging {
       case x: dom.ClassInstanceCreation =>
         if (x.getAnonymousClassDeclaration != null) {
           val methods = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
-          val properties = methods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList
+          val properties = methods.map { x => new MethodDefinition(x.id, new FunctionExpression(x.params, x.body), "method", false, false) }.toList
           val binding = x.getAnonymousClassDeclaration.resolveBinding
           if (binding.getInterfaces.length > 0) {
             var interfaces = binding.getInterfaces.map { x => new Identifier(x.getName) } toList
             var interfacesProperty = compilationunit.createInterfacesProperty(interfaces)
-            new ObjectExpression(interfacesProperty +: properties);
+            new ClassExpression(new ClassBody(interfacesProperty +: properties), null);
           } else {
-            new ObjectExpression(properties);
+            new ClassExpression(new ClassBody(properties), null);
           }
         } else {
           new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
@@ -233,8 +233,7 @@ object expression extends LazyLogging {
         throw new RuntimeException("SuperFieldAccess is unsupported")
       case x: dom.SuperMethodInvocation =>
         if (td.getSuperclassType != null) {
-          val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
-          val method = new MemberExpression(new MemberExpression(superClass, "prototype"), x.getName.getIdentifier)
+          val method = new MemberExpression(new Super(), x.getName.getIdentifier)
           val call = new MemberExpression(method, "call")
           new CallExpression(call, new ThisExpression() +: toExpressions(x.arguments))
         } else new Literal(null, "null") // NOTE: this happens when superclass is out of source tree

@@ -17,6 +17,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import java.nio.file.Path
 import org.eclipse.jdt.core.dom.ITypeBinding
 import org.eclipse.jdt.internal.compiler.ASTVisitor
+import org.eclipse.jdt.core.dom.MethodDeclaration
 
 object compilationunit extends LazyLogging {
 
@@ -38,7 +39,7 @@ object compilationunit extends LazyLogging {
 
     if (types.length == 0) return null
 
-    val functionDeclaration = types.head.asInstanceOf[FunctionDeclaration]
+    val classDeclaration = types.head.asInstanceOf[ClassDeclaration]
     val staticClassDeclarations = types.tail
 
     val mapper = new ObjectMapper
@@ -65,13 +66,13 @@ object compilationunit extends LazyLogging {
       Map[String, String]()
 
     val explicitImports = cu.imports.toList collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, root, file) }
-    val distinctImports = (builtinImports(root, file) ++ packageImports ++ explicitImports) - functionDeclaration.id.name
+    val distinctImports = (builtinImports(root, file) ++ packageImports ++ explicitImports) - classDeclaration.id.name
     //val distinctImports = (packageImports ++ explicitImports) - classDeclaration.id.name
     val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
 
     val imports = usedImports.collect { case (name, path) => createImport(name, path) }
 
-    val exportedTypes = new ExportDefaultDeclaration(functionDeclaration) +: staticClassDeclarations
+    val exportedTypes = new ExportDefaultDeclaration(classDeclaration) +: staticClassDeclarations
     new Program("module", imports ++ exportedTypes)
   }
 
@@ -94,8 +95,7 @@ object compilationunit extends LazyLogging {
   def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) = {
     val statements = createConstructorBody(constructors, memberFields, hasSuper)
     val params = List()
-    new FunctionDeclaration(
-      new Identifier(td.getName.getIdentifier),
+    new FunctionExpression(
       params,
       new BlockStatement(statements),
       false)
@@ -120,10 +120,14 @@ object compilationunit extends LazyLogging {
     }
 
     val defaultStatements = if (hasExplicitSuperCall) {
-      val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
-      val apply = new MemberExpression(superClass, "apply")
-      val call = new CallExpression(apply, List(new ThisExpression))
-      new ExpressionStatement(call) +: memberFields
+      // TODO: need to go into the correct constructor... 
+      /*
+      val apply = new MemberExpression("constructor_", "apply")
+      var apply2 = new MemberExpression(new Super(), apply)
+      val call = new CallExpression(apply2, List(new ThisExpression, new Identifier("arguments")))
+      new ExpressionStatement(call) +: 
+      */
+      memberFields
     } else {
       memberFields
     }
@@ -131,9 +135,9 @@ object compilationunit extends LazyLogging {
     defaultStatements ++ statements
   }
 
-  def createInterfacesProperty(interfaces: List[Identifier]): Property = {
+  def createInterfacesProperty(interfaces: List[Identifier]): MethodDefinition = {
     val returnInterfaces = new ReturnStatement(new ArrayExpression(interfaces))
-    new Property(new Identifier("interfaces_"), new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))))
+    new MethodDefinition(new Identifier("interfaces_"), new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))), "get", false, false)
   }
 
   def fromTypeDeclaration(implicit td: dom.TypeDeclaration): List[Statement] = {
@@ -187,34 +191,41 @@ object compilationunit extends LazyLogging {
   }
 
   def createClassDefinition(
-    constructor: FunctionDeclaration,
+    constructor: FunctionExpression,
     superClass: Expression = null,
     interfaces: List[Identifier] = List(),
     methods: Iterable[FunctionDeclaration] = List(),
     staticMethods: Iterable[FunctionDeclaration] = List(),
     innerInterfaces: List[FunctionDeclaration] = List(),
     staticInnerClasses: Array[List[Statement]] = Array(),
-    staticFields: Array[AssignmentExpression] = Array()): List[Statement] = {
+    staticFields: Array[AssignmentExpression] = Array())(implicit td: dom.TypeDeclaration): List[Statement] = {
 
-    val name = constructor.id
+    val name = new Identifier(td.getName.getIdentifier)
 
     // TODO: does not have to be a function?
     val returnClassName = new ReturnStatement(name)
     val getClassFunc = new FunctionExpression(List(), new BlockStatement(List(returnClassName)), false)
-    val getClassProperty = new Property("getClass", getClassFunc)
+    val getClassProperty = new MethodDefinition(new Identifier("getClass"), getClassFunc, "method", false, false)
 
     val interfacesProperty = createInterfacesProperty(interfaces)
 
-    val properties = methods.map { x => new Property(x.id, new FunctionExpression(x.params, x.body)) }.toList ++ List(interfacesProperty, getClassProperty)
-    val membersObject = new ObjectExpression(properties)
-    val prototype = new MemberExpression(name, "prototype")
-    val extend = new ExpressionStatement(new CallExpression(new Identifier("extend"), List(prototype, membersObject)))
+    val classMembers = methods.map { x => new MethodDefinition(x.id, 
+        new FunctionExpression(x.params, x.body), "method", false, false) }
 
-    val classDefinition = if (superClass != null) {
-      val inherits = new ExpressionStatement(new CallExpression(new Identifier("inherits"), List(name, superClass)))
-      List(constructor, inherits, extend)
-    } else List(constructor, extend)
-
+    val classMembersStatic = staticMethods.map { x => new MethodDefinition(x.id, 
+        new FunctionExpression(x.params, x.body), "method", false, true) }
+    
+    val apply = new MemberExpression("constructor_", "apply")
+    var apply2 = new MemberExpression(new ThisExpression(), apply)
+    val call = new ExpressionStatement(new CallExpression(apply2, List(new ThisExpression, new Identifier("arguments"))))
+    val constructorExpression = new FunctionExpression(null, new BlockStatement(List(call)), false)
+    
+    val constructorMethod = new MethodDefinition(new Identifier("constructor"), constructorExpression, "constructor", false, false)
+    // TODO: need to differentiate overloaded "constructor" if superclass
+    val constructorMethod_ = new MethodDefinition(new Identifier("constructor_"), constructor, "method", false, false)
+    val classBody = new ClassBody(List(constructorMethod, constructorMethod_) ++ classMembersStatic ++ classMembers :+ getClassProperty :+ interfacesProperty)
+    val classDefinition = new ClassDeclaration(name, classBody, superClass)
+    
     val innerInterfacesClassAssignments = innerInterfaces.map { x =>
       val memberName = new MemberExpression(name, x.id)
       val assignmentExpression = new AssignmentExpression("=", memberName, x.id)
@@ -222,23 +233,15 @@ object compilationunit extends LazyLogging {
     }
 
     val staticInnerClassAssignments = staticInnerClasses.map { x =>
-      val id = x.head.asInstanceOf[FunctionDeclaration].id
+      val id = x.head.asInstanceOf[ClassDeclaration].id
       val memberName = new MemberExpression(name, id)
       val assignmentExpression = new AssignmentExpression("=", memberName, id)
       new ExpressionStatement(assignmentExpression)
     }
-
-    val staticMethodAssignments = staticMethods.map { x =>
-      val memberName = new MemberExpression(name, x.id)
-      val functionExpression = new FunctionExpression(x.params, x.body)
-      val assignmentExpression = new AssignmentExpression("=", memberName, functionExpression)
-      new ExpressionStatement(assignmentExpression)
-    }
-
+    
     val staticFieldStatements = staticFields.map(new ExpressionStatement(_))
 
-    classDefinition ++ 
-    staticMethodAssignments ++ 
+    List(classDefinition) ++
     innerInterfaces ++
     innerInterfacesClassAssignments ++ staticInnerClasses.flatten.toList ++ staticInnerClassAssignments ++ staticFieldStatements
   }

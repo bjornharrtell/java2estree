@@ -8,6 +8,7 @@ import expression._
 import statement._
 import scala.collection.mutable.Buffer
 import org.eclipse.jdt.core.dom.TypeDeclaration
+import org.eclipse.jdt.core.dom.MethodDeclaration
 
 object method {
   def toFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
@@ -133,11 +134,11 @@ object method {
     else bodyStatements
 
     val consequent = new BlockStatement(statements)
-    var apply = new MemberExpression(m.getName.getIdentifier, "apply")
-    val call = new CallExpression(apply, List(new ThisExpression, new Identifier("arguments")))
+    
     val alternate = if (td.getSuperclassType != null) {
-      val superClass = td.getSuperclassType.asInstanceOf[dom.SimpleType].getName.getFullyQualifiedName
-      val superCall = new MemberExpression(new MemberExpression(superClass, "prototype"), call)
+      var apply = new MemberExpression(m.getName.getIdentifier, "apply")
+      val call = new CallExpression(apply, List(new ThisExpression, new Identifier("arguments")))
+      val superCall = new MemberExpression(new Super(), call)
       new ReturnStatement(superCall)
     } else null
     new IfStatement(test, consequent, alternate)

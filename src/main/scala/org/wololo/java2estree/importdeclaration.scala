@@ -46,8 +46,6 @@ object importdeclaration {
       ("Exception" -> "java/lang/Exception"),
       ("RuntimeException" -> "java/lang/RuntimeException"),
       ("IllegalArgumentException" -> "java/lang/IllegalArgumentException"),
-      ("extend" -> "extend"),
-      ("inherits" -> "inherits"),
       ("hasInterface" -> "hasInterface")).transform((name: String, path: String) => makeRelative(Paths.get(path), root, file))
   }
 

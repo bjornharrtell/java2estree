@@ -127,11 +127,26 @@ object compilationunit extends LazyLogging {
       val call = new CallExpression(apply2, List(new ThisExpression, new Identifier("arguments")))
       new ExpressionStatement(call) +: 
       */
+      
       memberFields
     } else {
       memberFields
     }
-
+    
+    /*
+    if (hasSuper) {
+      var left = new MemberExpression(new Identifier("arguments"), new Identifier("length"))
+      var right = new Literal(0, "0")
+      var logicalExpression = new LogicalExpression("===", left, right) 
+      var consequent = new ReturnStatement(null)
+      var ifStatement = new IfStatement(logicalExpression, consequent, null)
+      
+      List(ifStatement) ++ defaultStatements ++ statements
+    } else {
+      defaultStatements ++ statements
+    }
+    */
+    
     defaultStatements ++ statements
   }
 
@@ -221,7 +236,8 @@ object compilationunit extends LazyLogging {
     val apply = new MemberExpression("constructor_", "apply")
     var apply2 = new MemberExpression(name, apply)
     val call = new ExpressionStatement(new CallExpression(apply2, List(new ThisExpression, new Identifier("arguments"))))
-    var superCall = new ExpressionStatement(new CallExpression(new Super, null))
+    var superCallArguments = null // List(new SpreadElement(new Identifier("arguments")))
+    var superCall = new ExpressionStatement(new CallExpression(new Super, superCallArguments))
     var statements = if (superClass == null) List(call) else List(superCall, call)
     val constructorExpression = new FunctionExpression(null, new BlockStatement(statements), false)
     

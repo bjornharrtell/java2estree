@@ -52,6 +52,7 @@ object Cli extends App with LazyLogging {
     //if (!file.getPath.matches(".*/jts/index/intervalrtree/SortedPackedIntervalRTree.java.*")) return
     //if (!file.getPath.matches(".*PrecisionReducerCoordinateOperation.*")) return
     //if (!file.getPath.matches(".*GeometryEditor.*")) return
+    //if (!file.getPath.matches(".*CGAlgorithms.java*")) return
     
     if (skipList.find( e => file.getPath.matches(e) ).nonEmpty) {
       logger.info(s"Skipping ${file.getPath}")
@@ -69,7 +70,10 @@ object Cli extends App with LazyLogging {
     parser.setSource(bytes)
     val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
     val program = compilationunit.fromCompilationUnit(cu, root, file.toPath, name)
-    if (program == null) return
+    if (program == null) {
+      logger.info(s"Turned up empty for ${file.getPath}")
+      return
+    }
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     mapper.enable(SerializationFeature.INDENT_OUTPUT)

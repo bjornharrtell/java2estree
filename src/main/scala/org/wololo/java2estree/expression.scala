@@ -189,9 +189,11 @@ object expression extends LazyLogging {
           if (binding.getInterfaces.length > 0) {
             var interfaces = binding.getInterfaces.map { x => new Identifier(x.getName) } toList
             var interfacesProperty = compilationunit.createInterfacesProperty(interfaces)
-            new ClassExpression(new ClassBody(interfacesProperty +: properties), null);
+            var classExpression = new ClassExpression(new ClassBody(interfacesProperty +: properties), null);
+            new NewExpression(classExpression, toExpressions(x.arguments))
           } else {
-            new ClassExpression(new ClassBody(properties), null);
+            var classExpression = new ClassExpression(new ClassBody(properties), null);
+            new NewExpression(classExpression, toExpressions(x.arguments))
           }
         } else {
           new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))

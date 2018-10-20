@@ -53,7 +53,13 @@ object method {
         if (mds.size > 0) {
           val es = mds.map(d => d.resolveBinding).head.getParameterTypes.zipWithIndex map { case (x, i) => varToBinaryExpression(x, i) }
           // TODO: make this recursive
-          val test = if (es.size == 3)
+          val test = if (es.size == 6)
+            new LogicalExpression("&&", es(5), new LogicalExpression("&&", es(4), new LogicalExpression("&&", es(3), new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1))))))
+          else if (es.size == 5)
+            new LogicalExpression("&&", es(4), new LogicalExpression("&&", es(3), new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1)))))
+          else if (es.size == 4)
+            new LogicalExpression("&&", es(3), new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1))))
+          else if (es.size == 3)
             new LogicalExpression("&&", es(2), new LogicalExpression("&&", es(0), es(1)))
           else if (es.size == 2)
             new LogicalExpression("&&", es(0), es(1))

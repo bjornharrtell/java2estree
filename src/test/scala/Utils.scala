@@ -16,7 +16,7 @@ object Utils {
   
   def java2js(java: String) : String = {
     val doc = new Document(java)
-    val parser = ASTParser.newParser(AST.JLS8)
+    val parser = ASTParser.newParser(AST.JLS11)
     parser.setResolveBindings(true)
     parser.setBindingsRecovery(true)
     parser.setStatementsRecovery(true)

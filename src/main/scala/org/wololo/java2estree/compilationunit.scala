@@ -1,7 +1,7 @@
 package org.wololo.java2estree
 
 import org.wololo.estree._
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import org.eclipse.jdt.core.dom
 import expression._
 import statement._
@@ -23,7 +23,7 @@ object compilationunit extends LazyLogging {
 
   def isDeprecated(javadoc: dom.Javadoc): Boolean = {
     if (javadoc != null && javadoc.tags != null)
-      javadoc.tags.toList collect { case x: dom.TagElement => x } exists { x => x.getTagName == "@deprecated" }
+      javadoc.tags.asScala collect { case x: dom.TagElement => x } exists { x => x.getTagName == "@deprecated" }
     else false
   }
 
@@ -35,7 +35,7 @@ object compilationunit extends LazyLogging {
    * @return ESTree Program node
    */
   def fromCompilationUnit(cu: dom.CompilationUnit, root: Path, file: Path, name: String): Program = {
-    val types = cu.types.toList collect { case x: dom.TypeDeclaration if !isDeprecated(x.getJavadoc) => fromTypeDeclaration(x) } flatten
+    val types = cu.types.asScala collect { case x: dom.TypeDeclaration if !isDeprecated(x.getJavadoc) => fromTypeDeclaration(x) } flatten
 
     if (types.length == 0) return null
 
@@ -58,14 +58,14 @@ object compilationunit extends LazyLogging {
     }
     
     def countIdentifier(name: String) =
-      tree.findParents("type").filter(compareIdentifier(_, name)).size
+      tree.findParents("type").asScala.filter(compareIdentifier(_, name)).size
 
     val packageImports = if (cu.getPackage != null)
       importsFromName(cu.getPackage.getName.getFullyQualifiedName, root, name)
     else
       Map[String, String]()
 
-    val explicitImports = cu.imports.toList collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, root, file) }
+    val explicitImports = cu.imports.asScala collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, root, file) }
     val distinctImports = (builtinImports(root, file) ++ packageImports ++ explicitImports) - classDeclaration.id.name
     //val distinctImports = (packageImports ++ explicitImports) - classDeclaration.id.name
     val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
@@ -80,17 +80,17 @@ object compilationunit extends LazyLogging {
     new Identifier(x.getName.getIdentifier)
 
   def fromParameters(parameters: java.util.List[_]) =
-    parameters collect { case x: dom.SingleVariableDeclaration => fromSingleVariableDeclaration(x) }
+    parameters.asScala collect { case x: dom.SingleVariableDeclaration => fromSingleVariableDeclaration(x) }
 
   def fromBlock2(bs: dom.Block)(implicit td: dom.TypeDeclaration): Iterable[Statement] =
-    bs.statements collect { case statement: dom.Statement => fromStatement(statement) }
+    bs.statements.asScala collect { case statement: dom.Statement => fromStatement(statement) }
 
   def fromBlock(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement =
     if (bs == null)
       new BlockStatement(List())
     else
       new BlockStatement(
-        bs.statements collect { case statement: dom.Statement => fromStatement(statement) })
+        bs.statements.asScala collect { case statement: dom.Statement => fromStatement(statement) })
 
   def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) = {
     val statements = createConstructorBody(constructors, memberFields, hasSuper)

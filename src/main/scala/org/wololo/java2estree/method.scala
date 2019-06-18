@@ -1,7 +1,7 @@
 package org.wololo.java2estree
 
 import org.wololo.estree._
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import org.eclipse.jdt.core.dom
 import compilationunit._
 import expression._
@@ -81,8 +81,8 @@ object method {
         // TODO: Not sure this follows https://docs.oracle.com/javase/specs/jls/se7/html/jls-15.html#jls-15.12.2.5
         // TODO: Consider all params
         var sorted = declarations.toList.sortWith { (md1, md2) => {
-            val b1 = md1.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
-            val b2 = md2.parameters()(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
+            val b1 = md1.parameters().asScala(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
+            val b2 = md2.parameters().asScala(0).asInstanceOf[dom.SingleVariableDeclaration].getType.resolveBinding
             b1.isSubTypeCompatible(b2)
           }
         }
@@ -95,7 +95,7 @@ object method {
       }
     }
 
-    val cases = x.groupBy({ _.parameters.length }).toList.sortBy(_._1).collect({
+    val cases = x.groupBy({ _.parameters.asScala.length }).toList.sortBy(_._1).collect({
       case (argsCount, methods) => (new Literal(argsCount, argsCount.toString), fromSameArgLength(methods))
     })
     
@@ -213,7 +213,7 @@ object method {
     val isProtected = dom.Modifier.isProtected(declaration.getModifiers)
     val isPrivate = dom.Modifier.isPrivate(declaration.getModifiers)
     val prefix = if (isPrivate || isProtected) "_" else ""
-    declaration.fragments collect {
+    declaration.fragments.asScala collect {
       case field: dom.VariableDeclarationFragment if (!isStatic && !isInterface) =>
         new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(
             new ThisExpression(), prefix + field.getName.getIdentifier
@@ -226,7 +226,7 @@ object method {
   def fromFieldDeclarationStatic(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = {
     val isInterface = td.isInterface()
     var isStatic = dom.Modifier.isStatic(declaration.getModifiers)
-    declaration.fragments collect {
+    declaration.fragments.asScala collect {
       case field: dom.VariableDeclarationFragment if (isStatic || isInterface) => {
         if (field.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of VariableDeclarationFragment when parsing " + field + " with parent " + field.getParent)
         val left = new MemberExpression(td.getName.getIdentifier, field.getName.getIdentifier)

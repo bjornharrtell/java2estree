@@ -1,6 +1,6 @@
 package org.wololo.java2estree
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.Buffer
 import org.wololo.estree._
 import compilationunit._
@@ -33,7 +33,7 @@ object statement {
   }
 
   def fromFragments(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
-    fragments collect { case x: dom.VariableDeclarationFragment => fromVariableDeclarationFragment(x) }
+    fragments.asScala collect { case x: dom.VariableDeclarationFragment => fromVariableDeclarationFragment(x) }
 
   def fromForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
     val init = if (x.initializers.size == 0) null
@@ -58,7 +58,7 @@ object statement {
       val alternate = fromStatement(x.getElseStatement)
       new IfStatement(toExpression(x.getExpression), consequent, alternate)
     case x: dom.SwitchStatement =>
-      val cases = fromSwitchCases(x.statements collect { case x: dom.Statement => x })
+      val cases = fromSwitchCases(x.statements.asScala collect { case x: dom.Statement => x })
       new SwitchStatement(toExpression(x.getExpression), cases)
     case x: dom.ContinueStatement =>
       new ContinueStatement()
@@ -95,7 +95,7 @@ object statement {
       val finalizer = fromBlock(x.getFinally)
       if (x.catchClauses.size() > 0) {
         val name = new Identifier(x.catchClauses().get(0).asInstanceOf[dom.CatchClause].getException.getName.getIdentifier)
-        val cases = new BlockStatement(List(fromCatchClauses(x.catchClauses collect { case x: dom.CatchClause => x }, name)))
+        val cases = new BlockStatement(List(fromCatchClauses(x.catchClauses.asScala collect { case x: dom.CatchClause => x }, name)))
         val handler = new CatchClause(name, cases)
         new TryStatement(block, handler, finalizer)
       } else {

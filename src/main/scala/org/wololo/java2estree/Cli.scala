@@ -34,7 +34,7 @@ object Cli extends App with LazyLogging {
   val root = Paths.get(args(0))
   val outpath = Paths.get(args(1))
 
-  val parser = ASTParser.newParser(AST.JLS8)
+  val parser = ASTParser.newParser(AST.JLS11)
   
   logger.info(s"Walking ${root}")
   

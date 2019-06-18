@@ -1,6 +1,6 @@
 package org.wololo.java2estree
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.Buffer
 import org.wololo.estree._
 import org.eclipse.jdt.core.dom
@@ -77,7 +77,7 @@ object expression extends LazyLogging {
    */
   def toBinaryExpression(op: String, left: Expression, rest: Buffer[dom.Expression], shouldTrunc: Boolean)(implicit td: dom.TypeDeclaration): Expression = {
 
-    def be = new BinaryExpression(op, left, toExpression(rest.get(0)))
+    def be = new BinaryExpression(op, left, toExpression(rest(0)))
     if (rest.length == 0)
       left
     else if (rest.length == 1)
@@ -96,7 +96,7 @@ object expression extends LazyLogging {
   }
 
   def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
-    expressions collect { case x: dom.Expression => toExpression(x) }
+    expressions.asScala collect { case x: dom.Expression => toExpression(x) }
 
   def create2DArrayExpression(x: Expression, y: Expression): CallExpression = {
     val xCall = new CallExpression(new Identifier("Array"), List(x))
@@ -131,11 +131,11 @@ object expression extends LazyLogging {
       case x: dom.TypeLiteral =>
         new Identifier(x.getType.toString)
       case x: dom.ArrayCreation =>
-        if (x.dimensions().length == 1) {
+        if (x.dimensions().asScala.length == 1) {
           val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
           val fill = new MemberExpression(new NewExpression(new Identifier("Array"), List(r)), "fill")
           new CallExpression(fill, List(new Literal(null, "null")))
-        } else if (x.dimensions().length > 1) {
+        } else if (x.dimensions().asScala.length > 1) {
           val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
           val c = toExpression(x.dimensions().get(1).asInstanceOf[dom.Expression])
           create2DArrayExpression(r, c)
@@ -167,7 +167,7 @@ object expression extends LazyLogging {
         val e = new BinaryExpression(op, toExpression(left), toExpression(right))
         val initial = if (shouldTrunc) truncCall(e) else e
         if (x.extendedOperands.size() > 0)
-          toBinaryExpression(op, initial, x.extendedOperands collect { case x: dom.Expression => x }, shouldTrunc)
+          toBinaryExpression(op, initial, x.extendedOperands.asScala collect { case x: dom.Expression => x }, shouldTrunc)
         else
           initial
       case x: dom.InstanceofExpression =>
@@ -183,7 +183,7 @@ object expression extends LazyLogging {
           toExpression(x.getExpression)
       case x: dom.ClassInstanceCreation =>
         if (x.getAnonymousClassDeclaration != null) {
-          val methods = x.getAnonymousClassDeclaration.bodyDeclarations collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
+          val methods = x.getAnonymousClassDeclaration.bodyDeclarations.asScala collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
           val properties = methods.map { x => new MethodDefinition(x.id, new FunctionExpression(x.params, x.body), "method", false, false) }.toList
           val binding = x.getAnonymousClassDeclaration.resolveBinding
           if (binding.getInterfaces.length > 0) {

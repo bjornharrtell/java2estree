@@ -187,12 +187,12 @@ object expression extends LazyLogging {
           val properties = methods.map { x => new MethodDefinition(x.id, new FunctionExpression(x.params, x.body), "method", false, false) }.toList
           val binding = x.getAnonymousClassDeclaration.resolveBinding
           if (binding.getInterfaces.length > 0) {
-            var interfaces = binding.getInterfaces.map { x => new Identifier(x.getName) } toList
-            var interfacesProperty = compilationunit.createInterfacesProperty(interfaces)
-            var classExpression = new ClassExpression(new ClassBody(interfacesProperty +: properties), null);
+            val interfaces = binding.getInterfaces.map { x => new Identifier(x.getName) } toList
+            val interfacesProperty = compilationunit.createInterfacesProperty(interfaces)
+            val classExpression = new ClassExpression(new ClassBody(interfacesProperty +: properties), null);
             new NewExpression(classExpression, toExpressions(x.arguments))
           } else {
-            var classExpression = new ClassExpression(new ClassBody(properties), null);
+            val classExpression = new ClassExpression(new ClassBody(properties), null);
             new NewExpression(classExpression, toExpressions(x.arguments))
           }
         } else {
@@ -205,8 +205,8 @@ object expression extends LazyLogging {
         val isProtected = dom.Modifier.isProtected(b.getModifiers)
         val prefix = if ((isPrivate || isProtected) && !isStatic) "_" else "" 
         x.getExpression match {
-          case m: dom.ThisExpression => new MemberExpression(new ThisExpression(), prefix + x.getName.getIdentifier)
-          case m: dom.Expression     => new MemberExpression(toExpression(x.getExpression), prefix + x.getName.getIdentifier)
+          case dom.ThisExpression => new MemberExpression(new ThisExpression(), prefix + x.getName.getIdentifier)
+          case dom.Expression     => new MemberExpression(toExpression(x.getExpression), prefix + x.getName.getIdentifier)
         }
       case x: dom.MethodInvocation =>
         if (x.resolveMethodBinding == null)

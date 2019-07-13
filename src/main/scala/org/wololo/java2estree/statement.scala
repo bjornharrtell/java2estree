@@ -39,7 +39,7 @@ object statement {
     val init = if (x.initializers.size == 0) null
     else if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression]) {
       val vde = x.initializers.get(0).asInstanceOf[dom.VariableDeclarationExpression]
-      new VariableDeclaration(fromFragments(vde.fragments), "var")
+      new VariableDeclaration(fromFragments(vde.fragments), "let")
     } else
       new SequenceExpression(toExpressions(x.initializers))
     val update: Expression = if (x.updaters.size() == 0) null
@@ -87,7 +87,7 @@ object statement {
       new ExpressionStatement(call)
     case x: dom.Block => fromBlock(x)
     case x: dom.VariableDeclarationStatement =>
-      new VariableDeclaration(fromFragments(x.fragments), "var")
+      new VariableDeclaration(fromFragments(x.fragments), "let")
     case x: dom.ExpressionStatement =>
       new ExpressionStatement(toExpression(x.getExpression))
     case x: dom.TryStatement =>

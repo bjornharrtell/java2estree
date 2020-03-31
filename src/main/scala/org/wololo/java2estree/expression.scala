@@ -205,8 +205,8 @@ object expression extends LazyLogging {
         val isProtected = dom.Modifier.isProtected(b.getModifiers)
         val prefix = if ((isPrivate || isProtected) && !isStatic) "_" else "" 
         x.getExpression match {
-          case dom.ThisExpression => new MemberExpression(new ThisExpression(), prefix + x.getName.getIdentifier)
-          case dom.Expression     => new MemberExpression(toExpression(x.getExpression), prefix + x.getName.getIdentifier)
+          case xe: dom.ThisExpression => new MemberExpression(new ThisExpression(), prefix + x.getName.getIdentifier)
+          case xe: dom.Expression     => new MemberExpression(toExpression(x.getExpression), prefix + x.getName.getIdentifier)
         }
       case x: dom.MethodInvocation =>
         if (x.resolveMethodBinding == null)

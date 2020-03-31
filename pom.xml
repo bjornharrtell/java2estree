@@ -9,17 +9,17 @@
 		<dependency>
 			<groupId>org.scala-lang</groupId>
 			<artifactId>scala-library</artifactId>
-			<version>2.12.8</version>
+			<version>2.12.10</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.module</groupId>
 			<artifactId>jackson-module-scala_2.12</artifactId>
-			<version>2.9.9</version>
+			<version>2.10.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jdt</groupId>
 			<artifactId>org.eclipse.jdt.core</artifactId>
-			<version>3.17.0</version>
+			<version>3.21.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.typesafe.scala-logging</groupId>
@@ -39,7 +39,7 @@
 		<dependency>
 			<groupId>org.scalatest</groupId>
 			<artifactId>scalatest_2.12</artifactId>
-			<version>3.0.8</version>
+			<version>3.1.1</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -51,7 +51,7 @@
 			<plugin>
 				<groupId>net.alchim31.maven</groupId>
 				<artifactId>scala-maven-plugin</artifactId>
-				<version>4.0.2</version>
+				<version>4.3.1</version>
 				<executions>
 					<execution>
 						<goals>
@@ -78,7 +78,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
-				<version>3.1.1</version>
+				<version>3.1.2</version>
 				<executions>
 					<execution>
 						<id>copy-dependencies</id>
@@ -98,7 +98,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.1.2</version>
+				<version>3.2.0</version>
 				<configuration>
 					<archive>
 						<manifest>

@@ -87,6 +87,12 @@ class ForInStatement (
   val body: Statement
 ) extends Statement
 
+class ForOfStatement (
+  val left: Node,
+  val right: Expression,
+  val body: Statement
+) extends Statement
+
 // Declarations
 
 trait Declaration extends Statement

@@ -67,10 +67,11 @@ object statement {
     case x: dom.ForStatement =>
       fromForStatement(x)
     case x: dom.EnhancedForStatement =>
-      val left = toExpression(x.getParameter.getInitializer)
+      var name = x.getParameter.getName.getIdentifier
+      val left = new VariableDeclaration(List(new VariableDeclarator(new Identifier(name))), "const")
       val right = toExpression(x.getExpression)
       val body = fromStatement(x.getBody)
-      new ForInStatement(left, right, body)
+      new ForOfStatement(left, right, body)
     case x: dom.WhileStatement =>
       new WhileStatement(toExpression(x.getExpression), fromStatement(x.getBody))
     case x: dom.DoStatement =>

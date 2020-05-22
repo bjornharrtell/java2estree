@@ -196,7 +196,12 @@ object expression extends LazyLogging {
             new NewExpression(classExpression, toExpressions(x.arguments))
           }
         } else {
-          new NewExpression(new Identifier(x.getType.toString), toExpressions(x.arguments))
+          var simpleType = x.getType match {
+            case x: dom.SimpleType => x
+            case pt: dom.ParameterizedType => pt.getType.asInstanceOf[dom.SimpleType]
+          }
+          var name = simpleType.getName.getFullyQualifiedName
+          new NewExpression(new Identifier(name), toExpressions(x.arguments))
         }
       case x: dom.FieldAccess =>
         val b = x.resolveFieldBinding

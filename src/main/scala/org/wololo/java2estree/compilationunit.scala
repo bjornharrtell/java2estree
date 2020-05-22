@@ -197,7 +197,10 @@ object compilationunit extends LazyLogging {
     val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getTypeDeclaration.getName) } toList
 
     val superClass = if (hasSuperclass) {
-      val superClassType = td.getSuperclassType.asInstanceOf[dom.SimpleType]
+      var superClassType = td.getSuperclassType match {
+        case pt: dom.ParameterizedType => pt.getType.asInstanceOf[dom.SimpleType]
+        case st: dom.SimpleType => st
+      }
       val superClassName = superClassType.getName.getFullyQualifiedName
       val superClassNames = superClassName.split('.')
       if (superClassNames.length > 1) {

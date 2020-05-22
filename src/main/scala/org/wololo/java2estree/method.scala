@@ -23,7 +23,8 @@ object method {
   def varToBinaryExpression(binding: dom.ITypeBinding, i: Int) = {
     val identifier = new MemberExpression(new Identifier("arguments"), new Literal(i, i.toString), true)
     val isInterface = binding.isInterface
-    val typeName = binding.getName
+    // remove parameterized type stuff
+    val typeName = binding.getName.replaceAll("<.*>", "")
     if (binding.isArray)
       toInstanceOf(identifier, "Array")
     else if (typeName == "boolean")

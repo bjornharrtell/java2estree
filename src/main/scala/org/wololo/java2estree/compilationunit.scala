@@ -2,6 +2,7 @@ package org.wololo.java2estree
 
 import org.wololo.estree._
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
 import org.eclipse.jdt.core.dom
 import expression._
 import statement._
@@ -167,9 +168,6 @@ object compilationunit extends LazyLogging {
 
     val constructor = createConstructor(constructors, memberFields, hasSuperclass)
     
-    val left = new MemberExpression(td.getName.getIdentifier, new Identifier("constructor_"))
-    val staticConstructor = new AssignmentExpression("=", left, constructor)
-
     val memberMethods = methods
       .filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers))
       .groupBy(_.getName.getIdentifier).map {
@@ -208,7 +206,7 @@ object compilationunit extends LazyLogging {
       } else new Identifier(superClassName)
     } else null
 
-    createClassDefinition(constructor, superClass, interfaces, memberMethods, staticMethods, innerInterfaces, staticInnerClasses, staticConstructor +: staticFields)
+    createClassDefinition(constructor, superClass, interfaces, memberMethods, staticMethods, innerInterfaces, staticInnerClasses, staticFields)
   }
 
   def createClassDefinition(
@@ -223,43 +221,39 @@ object compilationunit extends LazyLogging {
 
     val name = new Identifier(td.getName.getIdentifier)
 
-    // TODO: does not have to be a function?
-    val returnClassName = new ReturnStatement(name)
-    val getClassFunc = new FunctionExpression(List(), new BlockStatement(List(returnClassName)), false)
-    val getClassProperty = new MethodDefinition(new Identifier("getClass"), getClassFunc, "method", false, false)
-
-    val interfacesProperty = createInterfacesProperty(interfaces)
-
     val classMembers = methods.map { x => new MethodDefinition(x.id, 
-        new FunctionExpression(x.params, x.body), "method", false, false) }
+      new FunctionExpression(x.params, x.body), "method", false, false) }
 
-    val classMembersStatic = staticMethods.map { x => new MethodDefinition(x.id, 
-        new FunctionExpression(x.params, x.body), "method", false, true) }
+    val classMembersStatic = ArrayBuffer.empty[MethodDefinition]
+    if (constructor.body.body.size > 0)
+      classMembersStatic += new MethodDefinition(new Identifier("constructor_"), constructor, "method", false, true)
+    classMembersStatic ++= staticMethods.map { x => new MethodDefinition(x.id,
+      new FunctionExpression(x.params, x.body), "method", false, true) }
     
-    val apply = new MemberExpression("constructor_", "apply")
-    var apply2 = new MemberExpression(name, apply)
-    val call = new ExpressionStatement(new CallExpression(apply2, List(new ThisExpression, new Identifier("arguments"))))
-    var superCallArguments = null // List(new SpreadElement(new Identifier("arguments")))
-    var superCall = new ExpressionStatement(new CallExpression(new Super, superCallArguments))
-    var statements = if (superClass == null) List(call) else List(superCall, call)
-    val constructorExpression = new FunctionExpression(null, new BlockStatement(statements), false)
+    val constructorStatements = ArrayBuffer.empty[ExpressionStatement]
+    if (superClass != null)
+      constructorStatements += new ExpressionStatement(new CallExpression(new Super, null))
+    if (constructor.body.body.size > 0)
+      constructorStatements += new ExpressionStatement(new CallExpression(
+        new MemberExpression(name, new MemberExpression("constructor_", "apply")),
+        List(new ThisExpression, new Identifier("arguments"))))
+    val constructorExpression = new FunctionExpression(null, new BlockStatement(constructorStatements), false)
     
-    val constructorMethod = new MethodDefinition(new Identifier("constructor"), constructorExpression, "constructor", false, false)
-    val classBody = new ClassBody(List(constructorMethod) ++ classMembersStatic ++ classMembers :+ getClassProperty :+ interfacesProperty)
+    val classMethods = ArrayBuffer.empty[MethodDefinition]
+    if (constructorStatements.size > 0)
+      classMethods += new MethodDefinition(new Identifier("constructor"), constructorExpression, "constructor", false, false)
+    classMethods ++= classMembersStatic ++ classMembers
+    if (interfaces.size > 0)
+      classMethods += createInterfacesProperty(interfaces)
+    val classBody = new ClassBody(classMethods)
     val classDefinition = new ClassDeclaration(name, classBody, superClass)
     
-    val innerInterfacesClassAssignments = innerInterfaces.map { x =>
-      val memberName = new MemberExpression(name, x.id)
-      val assignmentExpression = new AssignmentExpression("=", memberName, x.id)
-      new ExpressionStatement(assignmentExpression)
-    }
+    val innerInterfacesClassAssignments = innerInterfaces
+      .map(x => new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(name, x.id), x.id)))
 
-    val staticInnerClassAssignments = staticInnerClasses.map { x =>
-      val id = x.head.asInstanceOf[ClassDeclaration].id
-      val memberName = new MemberExpression(name, id)
-      val assignmentExpression = new AssignmentExpression("=", memberName, id)
-      new ExpressionStatement(assignmentExpression)
-    }
+    val staticInnerClassAssignments = staticInnerClasses
+      .map(x => x.head.asInstanceOf[ClassDeclaration].id)
+      .map(id => new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(name, id), id)))
     
     val staticFieldStatements = staticFields.map(new ExpressionStatement(_))
 

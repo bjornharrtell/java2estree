@@ -134,7 +134,7 @@ object method {
     else
       es(0)
     
-    val bodyStatements = fromBlock2(m.getBody).toList
+    val bodyStatements = fromBlock(m.getBody).body.toList
     var patterns = fromParameters(m.parameters).toList
     val statements = if (patterns.length > 0)
       argsToLet(patterns) +: bodyStatements

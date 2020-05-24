@@ -69,9 +69,9 @@ object compilationunit extends LazyLogging {
     val explicitImports = cu.imports.asScala collect { case x: dom.ImportDeclaration => fromImportDeclaration(x, root, file) }
     val distinctImports = (builtinImports(root, file) ++ packageImports ++ explicitImports) - classDeclaration.id.name
     //val distinctImports = (packageImports ++ explicitImports) - classDeclaration.id.name
-    val usedImports = distinctImports.filter { case (name, path) => countIdentifier(name) > 0 }
+    val usedImports = distinctImports filter { case (name, path) => countIdentifier(name) > 0 }
 
-    val imports = usedImports.collect { case (name, path) => createImport(name, path) }
+    val imports = usedImports collect { case (name, path) => createImport(name, path) }
 
     val exportedTypes = new ExportDefaultDeclaration(classDeclaration) +: staticClassDeclarations
     new Program("module", imports ++ exportedTypes)
@@ -83,23 +83,17 @@ object compilationunit extends LazyLogging {
   def fromParameters(parameters: java.util.List[_]) =
     parameters.asScala collect { case x: dom.SingleVariableDeclaration => fromSingleVariableDeclaration(x) }
 
-  def fromBlock2(bs: dom.Block)(implicit td: dom.TypeDeclaration): Iterable[Statement] =
-    bs.statements.asScala collect { case statement: dom.Statement => fromStatement(statement) }
-
-  def fromBlock(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement =
-    if (bs == null)
-      new BlockStatement(List())
-    else
-      new BlockStatement(
-        bs.statements.asScala collect { case statement: dom.Statement => fromStatement(statement) })
+  def fromBlock(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement = {
+    val statements = ArrayBuffer.empty[Statement]
+    if (bs != null)
+      statements ++= bs.statements.asScala collect { case statement: dom.Statement => fromStatement(statement) }
+    new BlockStatement(statements)
+  }
 
   def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) = {
     val statements = createConstructorBody(constructors, memberFields, hasSuper)
     val params = List()
-    new FunctionExpression(
-      params,
-      new BlockStatement(statements),
-      false)
+    new FunctionExpression(params, new BlockStatement(statements), false)
   }
 
   def createConstructorBody(
@@ -111,14 +105,13 @@ object compilationunit extends LazyLogging {
 
     var hasExplicitSuperCall = hasSuper
 
-    constructors.foreach {
-      _.accept(new dom.ASTVisitor() {
-        override def visit(node: SuperConstructorInvocation): Boolean = {
-          hasExplicitSuperCall = false
-          true
-        }
-      })
+    var visitor = new dom.ASTVisitor() {
+      override def visit(node: SuperConstructorInvocation): Boolean = {
+        hasExplicitSuperCall = false
+        true
+      }
     }
+    constructors.foreach(_.accept(visitor))
 
     val defaultStatements = if (hasExplicitSuperCall) {
       // TODO: need to go into the correct constructor... 
@@ -169,28 +162,25 @@ object compilationunit extends LazyLogging {
     val constructor = createConstructor(constructors, memberFields, hasSuperclass)
     
     val memberMethods = methods
-      .filter(m => !m.isConstructor() && !Modifier.isStatic(m.getModifiers))
-      .groupBy(_.getName.getIdentifier).map {
-        case (name, methods) => {
-          fromMethodDeclarations(methods)
-        }
-      }
+      .filter(m => !m.isConstructor && !Modifier.isStatic(m.getModifiers))
+      .groupBy(_.getName.getIdentifier)
+      .map({ case (name, methods) => fromMethodDeclarations(methods) })
 
     val staticMethods = methods
-      .filter(m => !m.isConstructor() && Modifier.isStatic(m.getModifiers))
-      .groupBy(_.getName.getIdentifier).map {
-        case (name, methods) => fromMethodDeclarations(methods)
-      }
+      .filter(m => !m.isConstructor && Modifier.isStatic(m.getModifiers))
+      .groupBy(_.getName.getIdentifier)
+      .map({ case (name, methods) => fromMethodDeclarations(methods) })
 
-    val innerInterfaces = types.filter(x => x.isInterface()).map {
-        x => new FunctionDeclaration(new Identifier(x.getName.getIdentifier), List(), new BlockStatement(List()))
-      }.toList
+    val innerInterfaces = types
+      .filter(_.isInterface)
+      .map(x => new FunctionDeclaration(new Identifier(x.getName.getIdentifier), List(), new BlockStatement(List())))
+      .toList
 
     // TODO: Member inner classes should probably defined as getters
     //val memberInnerCasses = types.filter(x => !Modifier.isStatic(x.getModifiers)).map { fromClassOrInterfaceDeclarationMember(_) }
     val staticInnerClasses = types
       .filter(x => Modifier.isStatic(x.getModifiers) && !x.isInterface)
-      .map { x => fromTypeDeclaration(x) }
+      .map(fromTypeDeclaration(_))
 
     val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getTypeDeclaration.getName) } toList
 
@@ -221,14 +211,14 @@ object compilationunit extends LazyLogging {
 
     val name = new Identifier(td.getName.getIdentifier)
 
-    val classMembers = methods.map { x => new MethodDefinition(x.id, 
-      new FunctionExpression(x.params, x.body), "method", false, false) }
+    val classMembers = methods
+      .map(x => new MethodDefinition(x.id, new FunctionExpression(x.params, x.body), "method", false, false))
 
     val classMembersStatic = ArrayBuffer.empty[MethodDefinition]
     if (constructor.body.body.size > 0)
       classMembersStatic += new MethodDefinition(new Identifier("constructor_"), constructor, "method", false, true)
-    classMembersStatic ++= staticMethods.map { x => new MethodDefinition(x.id,
-      new FunctionExpression(x.params, x.body), "method", false, true) }
+    classMembersStatic ++= staticMethods
+      .map(x => new MethodDefinition(x.id, new FunctionExpression(x.params, x.body), "method", false, true))
     
     val constructorStatements = ArrayBuffer.empty[ExpressionStatement]
     if (superClass != null)
@@ -252,7 +242,7 @@ object compilationunit extends LazyLogging {
       .map(x => new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(name, x.id), x.id)))
 
     val staticInnerClassAssignments = staticInnerClasses
-      .map(x => x.head.asInstanceOf[ClassDeclaration].id)
+      .map(_.head.asInstanceOf[ClassDeclaration].id)
       .map(id => new ExpressionStatement(new AssignmentExpression("=", new MemberExpression(name, id), id)))
     
     val staticFieldStatements = staticFields.map(new ExpressionStatement(_))

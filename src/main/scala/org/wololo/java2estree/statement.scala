@@ -23,25 +23,34 @@ object statement {
   }
 
   def fromCatchClauses(clauses: Iterable[dom.CatchClause], name: Identifier)(implicit td: dom.TypeDeclaration): Statement = {
-    if (clauses.size > 0) {
+    def createIfStatement(): IfStatement = {
       val test = toInstanceOf(name, clauses.head.getException.getType.resolveBinding().getName)
       val consequent = fromBlock(clauses.head.getBody)
       new IfStatement(test, consequent, fromCatchClauses(clauses.tail, name))
-    } else {
-      new ThrowStatement(name)
     }
+    if (clauses.size > 0)
+      createIfStatement()
+    else
+      new ThrowStatement(name)
   }
 
   def fromFragments(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     fragments.asScala collect { case x: dom.VariableDeclarationFragment => fromVariableDeclarationFragment(x) }
 
   def fromForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
-    val init = if (x.initializers.size == 0) null
-    else if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression]) {
-      val vde = x.initializers.get(0).asInstanceOf[dom.VariableDeclarationExpression]
-      new VariableDeclaration(fromFragments(vde.fragments), "let")
-    } else
-      new SequenceExpression(toExpressions(x.initializers))
+    def createInit(): Node = {
+      def createVarDecl(): VariableDeclaration = {
+        val vde = x.initializers.get(0).asInstanceOf[dom.VariableDeclarationExpression]
+        new VariableDeclaration(fromFragments(vde.fragments), "let")
+      }
+      if (x.initializers.size == 0)
+        null
+      else if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression])
+        createVarDecl()
+      else
+        new SequenceExpression(toExpressions(x.initializers))
+    }
+    val init = createInit()
     val update: Expression = if (x.updaters.size() == 0) null
     else if (x.updaters.size() == 1) toExpressions(x.updaters).head
     else new SequenceExpression(toExpressions(x.updaters))

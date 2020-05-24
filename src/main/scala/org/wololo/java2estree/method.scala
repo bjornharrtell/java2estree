@@ -228,9 +228,11 @@ object method {
     val isInterface = td.isInterface()
     var isStatic = dom.Modifier.isStatic(declaration.getModifiers)
     declaration.fragments.asScala collect {
-      case field: dom.VariableDeclarationFragment if (isStatic || isInterface) => {
+      case field: dom.VariableDeclarationFragment if (isStatic || isInterface) && field.getName.getIdentifier != "serialVersionUID" => {
         if (field.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of VariableDeclarationFragment when parsing " + field + " with parent " + field.getParent)
-        val left = new MemberExpression(td.getName.getIdentifier, field.getName.getIdentifier)
+        val typeName = td.getName.getIdentifier
+        var fieldName = field.getName.getIdentifier
+        val left = new MemberExpression(typeName, fieldName)
         val right = toExpression(field.getInitializer)
         new AssignmentExpression("=", left, right)
       }

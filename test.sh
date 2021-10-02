@@ -5,6 +5,6 @@ java -jar target/java2estree-0.2.0.jar /home/bjorn/code/jts/modules/core/src/mai
 for f in $(find /home/bjorn/code/jsts/src/org -name '*.ast')
 do
   echo "Processing $f" 
-  ./node_modules/astring/bin/astring --indent '	' $f > "${f/%.ast/.js}"
+  ./node_modules/astring/bin/astring --indent '  ' $f > "${f/%.ast/.js}"
 done
 

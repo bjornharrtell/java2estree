@@ -2,6 +2,7 @@ package org.wololo.java2estree
 
 import java.io.File
 import java.io.FileReader
+import org.eclipse.jdt.core.JavaCore
 import org.eclipse.jdt.core.dom.AST
 import org.eclipse.jdt.core.dom.ASTParser
 import org.eclipse.jdt.core.dom.CompilationUnit
@@ -22,7 +23,7 @@ object Cli extends App with LazyLogging {
   val skipList = List(
     "/jts/awt/",
     "/jts/io/",
-    "/jts/geom/impl/PackedCoordinateSequence",
+    "/jts/geom/impl/PackedCoordinateSequence.java",
 	  "/jts/util/Debug.java",
 	  "/jts/util/Stopwatch.java",
 	  "/jts/geom/Geometry.java",
@@ -53,6 +54,8 @@ object Cli extends App with LazyLogging {
     //if (!file.getPath.matches(".*PrecisionReducerCoordinateOperation.*")) return
     //if (!file.getPath.matches(".*GeometryEditor.*")) return
     //if (!file.getPath.matches(".*CGAlgorithms.java*")) return
+    //if (!file.getPath.matches(".*InputExtracter.java*")) return
+    //if (!file.getPath.matches(".*NumberUtil.java*")) return
     
     if (skipList.find( e => file.getPath.matches(e) ).nonEmpty) {
       logger.info(s"Skipping ${file.getPath}")
@@ -60,6 +63,9 @@ object Cli extends App with LazyLogging {
     }
     
     logger.info(s"Processing ${file.getPath}")
+    val options = JavaCore.getOptions()
+    options.put(JavaCore.COMPILER_SOURCE, "11")
+    parser.setCompilerOptions(options)
     parser.setResolveBindings(true)
     parser.setBindingsRecovery(true)
     parser.setStatementsRecovery(true)

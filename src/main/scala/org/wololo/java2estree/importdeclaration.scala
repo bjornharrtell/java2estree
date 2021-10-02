@@ -30,7 +30,7 @@ object importdeclaration {
   def createImport(name: String, path: String) = {
     new ImportDeclaration(
       List(new ImportDefaultSpecifier(new Identifier(name))),
-      new Literal(s"'${path}'", s"'${path}'"))
+      new Literal(s"'${path}.js'", s"'${path}.js'"))
   }
 
   def builtinImports(root: Path, file: Path): Map[String, String] = {

@@ -1,6 +1,6 @@
 import java.io.InputStreamReader
 import java.io.StringReader
-import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.jdk.CollectionConverters._
 import org.wololo.java2estree.compilationunit
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule

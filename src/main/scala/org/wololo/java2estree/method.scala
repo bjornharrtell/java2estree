@@ -1,7 +1,7 @@
 package org.wololo.java2estree
 
 import org.wololo.estree._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import org.eclipse.jdt.core.dom
 import compilationunit._
 import expression._
@@ -10,7 +10,7 @@ import scala.collection.mutable.Buffer
 import org.eclipse.jdt.core.dom.TypeDeclaration
 import org.eclipse.jdt.core.dom.MethodDeclaration
 
-object method {
+object method:
   def toFunctionExpression(x: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration) =
     new FunctionExpression(
       fromParameters(x.parameters),
@@ -48,7 +48,7 @@ object method {
   def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean)(implicit td: dom.TypeDeclaration) =
     def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): List[Statement] =
       def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]): Statement =
-        if (mds.size > 0) {
+        if (mds.size > 0)
           val es = mds.map(d => d.resolveBinding).head.getParameterTypes.zipWithIndex map { case (x, i) => varToBinaryExpression(x, i) }
           // TODO: make this recursive
           val test = if (es.size == 6)
@@ -71,9 +71,9 @@ object method {
           else bodyStatements
           val consequent = new BlockStatement(statements)
           new IfStatement(test, consequent, fromTypeOverloads(mds.tail))
-        } else null
+        else null
       
-      if (declarations.size > 1) {
+      if (declarations.size > 1)
                 
         // TODO: Not sure this follows https://docs.oracle.com/javase/specs/jls/se7/html/jls-15.html#jls-15.12.2.5
         // TODO: Consider all params
@@ -84,12 +84,11 @@ object method {
           }
         }
         List(fromTypeOverloads(sorted))
-      } else {
+      else
         val bodyStatements = fromBlock(declarations.head.getBody).body.toList
         var patterns = fromParameters(declarations.head.parameters).toList
         if (patterns.length > 0) argsToLet(patterns) +: bodyStatements
         else bodyStatements
-      }
 
     val cases = x.groupBy({ _.parameters.asScala.length }).toList.sortBy(_._1).collect({
       case (argsCount, methods) => (new Literal(argsCount, argsCount.toString), fromSameArgLength(methods))
@@ -97,20 +96,18 @@ object method {
     
     if (cases.size == 0) List()
     else if (cases.size == 1) cases.head._2
-    else {
+    else
       val test = new BinaryExpression("===", new Identifier("arguments.length"), cases.head._1)
       val ifStatement = toIf(new IfStatement(test, new BlockStatement(cases.head._2), null), cases.tail.toBuffer)
       List(ifStatement)
-    }
 
   def toIf(ifs: IfStatement, rest: Buffer[(Literal, List[Statement])]): IfStatement =
-    if (rest.length == 0) {
+    if (rest.length == 0)
       ifs
-    } else {
+    else
       val test = new BinaryExpression("===", new Identifier("arguments.length"), rest.head._1)
       val alternate = new IfStatement(test, new BlockStatement(rest.head._2), null)
       new IfStatement(ifs.test, ifs.consequent, toIf(alternate, rest.tail))
-    }
 
   def specificMethodConditional(m: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration): IfStatement =
     val argsLength = new MemberExpression("arguments", "length")
@@ -135,12 +132,12 @@ object method {
 
     val consequent = new BlockStatement(statements)
     
-    val alternate = if (td.getSuperclassType != null) {
+    val alternate = if (td.getSuperclassType != null)
       var apply = new MemberExpression(m.getName.getIdentifier, "apply")
       val call = new CallExpression(apply, List(new ThisExpression, new Identifier("arguments")))
       val superCall = new MemberExpression(new Super(), call)
       new ReturnStatement(superCall)
-    } else null
+    else null
     new IfStatement(test, consequent, alternate)
 
   /**
@@ -157,21 +154,19 @@ object method {
   
   def findSuperOverloads(m: dom.MethodDeclaration, superClass: dom.ITypeBinding, mbs: List[dom.IMethodBinding]): Iterable[dom.IMethodBinding] =
     val binding = m.resolveBinding
-    if (superClass != null) {
+    if (superClass != null)
       val methodBindings = superClass.getDeclaredMethods.filter(x => x.getName == m.getName.getIdentifier && !binding.overrides(x))
       findSuperOverloads(m, superClass.getSuperclass, mbs ++ methodBindings)
-    } else {
+    else
       mbs
-    }
 
   def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): FunctionDeclaration =
-        
     // check if single method has non overrided overload
     val binding = x.head.resolveBinding
     val superClass = binding.getDeclaringClass.getSuperclass
     val superOverloads = hasSuperOverloads(x.head, superClass)
     
-    if (x.size == 1) {
+    if (x.size == 1)
       val params = if (superOverloads)
         List()
       else
@@ -188,14 +183,13 @@ object method {
         block,
         false
       )
-    } else {
+    else
       new FunctionDeclaration(
         new Identifier(x.head.getName.getIdentifier),
         List(),
         new BlockStatement(fromOverloadedMethodDeclarations(x, true)),
         false
       )
-    }
 
   def fromFieldDeclarationMember(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) =
     val isInterface = td.isInterface()
@@ -225,4 +219,3 @@ object method {
         new AssignmentExpression("=", left, right)
       }
     }
-}

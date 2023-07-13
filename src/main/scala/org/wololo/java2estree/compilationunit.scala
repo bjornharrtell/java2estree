@@ -1,7 +1,7 @@
 package org.wololo.java2estree
 
 import org.wololo.estree._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
 import org.eclipse.jdt.core.dom
 import expression._
@@ -20,8 +20,7 @@ import org.eclipse.jdt.core.dom.ITypeBinding
 import org.eclipse.jdt.internal.compiler.ASTVisitor
 import org.eclipse.jdt.core.dom.MethodDeclaration
 
-object compilationunit extends LazyLogging {
-
+object compilationunit extends LazyLogging:
   def isDeprecated(javadoc: dom.Javadoc): Boolean =
     if (javadoc != null && javadoc.tags != null)
       javadoc.tags.asScala.collect({ case x: dom.TagElement => x }).exists(x => x.getTagName == "@deprecated")
@@ -46,7 +45,7 @@ object compilationunit extends LazyLogging {
     mapper.registerModule(DefaultScalaModule)
     val tree = mapper.valueToTree[JsonNode](types)
 
-    def compareIdentifier(node: JsonNode, name: String): Boolean = {
+    def compareIdentifier(node: JsonNode, name: String): Boolean =
       if (node.get("type").asText() != "Identifier") return false
       var nodeName = node.get("name").asText()
       
@@ -55,7 +54,6 @@ object compilationunit extends LazyLogging {
         return parts(0) == name
       else
         return nodeName == name
-    }
     
     def countIdentifier(name: String) =
       tree.findParents("type").asScala.filter(compareIdentifier(_, name)).size
@@ -87,11 +85,10 @@ object compilationunit extends LazyLogging {
       statements ++= bs.statements.asScala collect { case statement: dom.Statement => fromStatement(statement) }
     new BlockStatement(statements)
 
-  def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) = {
+  def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) =
     val statements = createConstructorBody(constructors, memberFields, hasSuper)
     val params = List()
     new FunctionExpression(params, new BlockStatement(statements), false)
-  }
 
   def createConstructorBody(
       constructors: Array[dom.MethodDeclaration],
@@ -102,15 +99,13 @@ object compilationunit extends LazyLogging {
 
     var hasExplicitSuperCall = hasSuper
 
-    var visitor = new dom.ASTVisitor() {
-      override def visit(node: SuperConstructorInvocation): Boolean = {
+    var visitor = new dom.ASTVisitor():
+      override def visit(node: SuperConstructorInvocation): Boolean =
         hasExplicitSuperCall = false
         true
-      }
-    }
     constructors.foreach(_.accept(visitor))
 
-    val defaultStatements = if (hasExplicitSuperCall) {
+    val defaultStatements = if (hasExplicitSuperCall)
       // TODO: need to go into the correct constructor... 
       /*
       val apply = new MemberExpression("constructor_", "apply")
@@ -120,9 +115,8 @@ object compilationunit extends LazyLogging {
       */
       
       memberFields
-    } else {
+    else
       memberFields
-    }
     
     /*
     if (hasSuper) {
@@ -144,7 +138,7 @@ object compilationunit extends LazyLogging {
     val returnInterfaces = new ReturnStatement(new ArrayExpression(interfaces))
     new MethodDefinition(new Identifier("interfaces_"), new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))), "get", false, false)
 
-  def fromTypeDeclaration(implicit td: dom.TypeDeclaration): List[Statement] = {
+  def fromTypeDeclaration(implicit td: dom.TypeDeclaration): List[Statement] =
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) || isDeprecated(x.getJavadoc) }
     val types = td.getTypes
 
@@ -179,20 +173,18 @@ object compilationunit extends LazyLogging {
 
     val interfaces = td.resolveBinding.getInterfaces.map(x => new Identifier(x.getTypeDeclaration.getName)).toList
 
-    val superClass = if (hasSuperclass) {
-      var superClassType = td.getSuperclassType match {
+    val superClass = if (hasSuperclass)
+      var superClassType = td.getSuperclassType match
         case pt: dom.ParameterizedType => pt.getType.asInstanceOf[dom.SimpleType]
         case st: dom.SimpleType => st
-      }
       val superClassName = superClassType.getName.getFullyQualifiedName
       val superClassNames = superClassName.split('.')
-      if (superClassNames.length > 1) {
+      if (superClassNames.length > 1)
         new MemberExpression(new Identifier(superClassNames(0)), new Identifier(superClassNames(1)), false)
-      } else new Identifier(superClassName)
-    } else null
+      else new Identifier(superClassName)
+    else null
 
     createClassDefinition(constructor, superClass, interfaces, memberMethods, staticMethods, innerInterfaces, staticInnerClasses, staticFields)
-  }
 
   def createClassDefinition(
     constructor: FunctionExpression,
@@ -245,5 +237,3 @@ object compilationunit extends LazyLogging {
     List(classDefinition) ++
     innerInterfaces ++
     innerInterfacesClassAssignments ++ staticInnerClasses.flatten.toList ++ staticInnerClassAssignments ++ staticFieldStatements
-
-}

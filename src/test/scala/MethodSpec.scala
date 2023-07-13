@@ -9,7 +9,7 @@ class MethodSpec extends AnyFlatSpec with Matchers {
   
   "A Class with a method" should "translate into a Class with a method" in {
     val java =
-"""
+    """
     class Test {
       void add() {
       }
@@ -17,7 +17,7 @@ class MethodSpec extends AnyFlatSpec with Matchers {
 """
     
     val expected =
-"""
+    """
     export default class Test {
       add() {}
     }
@@ -28,7 +28,7 @@ class MethodSpec extends AnyFlatSpec with Matchers {
   
   "Method parameters" should "translate into a method parameters" in {
     val java =
-"""
+    """
     class Test {
       void add(int x, int y) {
       }
@@ -36,7 +36,7 @@ class MethodSpec extends AnyFlatSpec with Matchers {
 """
     
     val expected =
-"""
+      """
     export default class Test {
       add(x, y) {}
     }
@@ -47,7 +47,7 @@ class MethodSpec extends AnyFlatSpec with Matchers {
   
   "Overloaded methods" should "translate into a single method with overload logic" in {
     val java =
-"""
+    """
     class Test {
       void add() {
         return null;
@@ -62,7 +62,7 @@ class MethodSpec extends AnyFlatSpec with Matchers {
 """
     
     val expected =
-"""
+    """
     export default class Test {
       add() {
         if (arguments.length === 0) {

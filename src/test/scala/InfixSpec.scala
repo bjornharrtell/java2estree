@@ -9,7 +9,7 @@ class InfixSpec extends AnyFlatSpec with Matchers {
   
   "An InfixExpression" should " with extended ops should translate cleanly" in {
     val java =
-"""
+    """
     class Test {
       int calc() {
         return 1 + 2 + 3;
@@ -18,7 +18,7 @@ class InfixSpec extends AnyFlatSpec with Matchers {
 """
     
     val expected =
-"""
+    """
     export default class Test {
       calc() {
         return 1 + 2 + 3;
@@ -31,7 +31,7 @@ class InfixSpec extends AnyFlatSpec with Matchers {
   
   "An InfixExpression" should " with ints and division should be truncated" in {
     val java =
-"""
+    """
     class Test {
       int calc() {
         return 1 / 2;
@@ -40,7 +40,7 @@ class InfixSpec extends AnyFlatSpec with Matchers {
 """
 
     val expected =
-"""
+    """
     export default class Test {
       calc() {
         return Math.trunc(1 / 2);
@@ -53,7 +53,7 @@ class InfixSpec extends AnyFlatSpec with Matchers {
   
   "An InfixExpression" should " with ints and division and exops should be truncated" in {
     val java =
-"""
+    """
     class Test {
       int calc() {
         return 1 / 2 / 2;
@@ -62,7 +62,7 @@ class InfixSpec extends AnyFlatSpec with Matchers {
 """
 
     val expected =
-"""
+    """
     export default class Test {
       calc() {
         return Math.trunc(Math.trunc(1 / 2) / 2);

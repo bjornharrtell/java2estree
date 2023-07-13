@@ -1,9 +1,9 @@
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import Utils.java2js
 
-class StringSpec extends FlatSpec with Matchers {
+class StringSpec extends AnyFlatSpec with Matchers {
 
   import Utils._
   
@@ -18,26 +18,18 @@ class StringSpec extends FlatSpec with Matchers {
         l = "".length();
       }
     }
-
 """
     
     val expected =
 """
     export default class Test {
-      get interfaces_() {
-        return [];
-      }
       test(a) {
-        var l = a.length;
-        var b = "";
+        let l = a.length;
+        let b = "";
         l = b.length;
-        l = "".length;
-      }
-      getClass() {
-        return Test;
+        l = ("").length;
       }
     }
-
 """
 
     java2js(java) should equal (expected)

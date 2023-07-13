@@ -49,7 +49,7 @@ object Cli extends App with LazyLogging {
     }
   }
   
-  def convert(file: File) {
+  def convert(file: File) : Unit = {
     //if (!file.getPath.matches(".*/jts/index/intervalrtree/SortedPackedIntervalRTree.java.*")) return
     //if (!file.getPath.matches(".*PrecisionReducerCoordinateOperation.*")) return
     //if (!file.getPath.matches(".*GeometryEditor.*")) return

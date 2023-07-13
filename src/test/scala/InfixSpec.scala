@@ -1,9 +1,9 @@
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import Utils.java2js
 
-class InfixSpec extends FlatSpec with Matchers {
+class InfixSpec extends AnyFlatSpec with Matchers {
 
   import Utils._
   
@@ -15,23 +15,15 @@ class InfixSpec extends FlatSpec with Matchers {
         return 1 + 2 + 3;
       }
     }
-
 """
     
     val expected =
 """
     export default class Test {
-      get interfaces_() {
-        return [];
-      }
       calc() {
         return 1 + 2 + 3;
       }
-      getClass() {
-        return Test;
-      }
     }
-
 """
 
     java2js(java) should equal (expected)
@@ -45,23 +37,15 @@ class InfixSpec extends FlatSpec with Matchers {
         return 1 / 2;
       }
     }
-
 """
 
     val expected =
 """
     export default class Test {
-      get interfaces_() {
-        return [];
-      }
       calc() {
         return Math.trunc(1 / 2);
       }
-      getClass() {
-        return Test;
-      }
     }
-
 """
 
     java2js(java) should equal (expected)
@@ -75,23 +59,15 @@ class InfixSpec extends FlatSpec with Matchers {
         return 1 / 2 / 2;
       }
     }
-
 """
 
     val expected =
 """
     export default class Test {
-      get interfaces_() {
-        return [];
-      }
       calc() {
         return Math.trunc(Math.trunc(1 / 2) / 2);
       }
-      getClass() {
-        return Test;
-      }
     }
-
 """
 
     java2js(java) should equal (expected)

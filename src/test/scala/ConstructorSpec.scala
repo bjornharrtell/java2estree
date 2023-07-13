@@ -1,9 +1,9 @@
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import Utils.java2js
 
-class ConstructorSpec extends FlatSpec with Matchers {
+class ConstructorSpec extends AnyFlatSpec with Matchers {
 
   import Utils._
   
@@ -18,27 +18,7 @@ class ConstructorSpec extends FlatSpec with Matchers {
     
     val expected =
 """
-    export default class Test {
-      constructor(...args) {
-        (() => {})();
-        const overloads = (...args) => {
-          switch (args.length) {
-            case 0:
-              return ((...args) => {
-                let [] = args;
-              })(...args);
-          }
-        };
-        return overloads.apply(this, args);
-      }
-      get interfaces_() {
-        return [];
-      }
-      getClass() {
-        return Test;
-      }
-    }
-
+    export default class Test {}
 """
 
     java2js(java) should equal (expected)
@@ -56,26 +36,13 @@ class ConstructorSpec extends FlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      constructor(...args) {
-        (() => {})();
-        const overloads = (...args) => {
-          switch (args.length) {
-            case 2:
-              return ((...args) => {
-                let [x, y] = args;
-              })(...args);
-          }
-        };
-        return overloads.apply(this, args);
+      constructor() {
+        Test.constructor_.apply(this, arguments);
       }
-      get interfaces_() {
-        return [];
-      }
-      getClass() {
-        return Test;
+      static constructor_() {
+        let x = arguments[0], y = arguments[1];
       }
     }
-
 """
 
     java2js(java) should equal (expected)
@@ -95,29 +62,15 @@ class ConstructorSpec extends FlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      constructor(...args) {
-        (() => {
-          this.x = null;
-        })();
-        const overloads = (...args) => {
-          switch (args.length) {
-            case 1:
-              return ((...args) => {
-                let [x] = args;
-                this.x = x;
-              })(...args);
-          }
-        };
-        return overloads.apply(this, args);
+      constructor() {
+        Test.constructor_.apply(this, arguments);
       }
-      get interfaces_() {
-        return [];
-      }
-      getClass() {
-        return Test;
+      static constructor_() {
+        this.x = null;
+        let x = arguments[0];
+        this.x = x;
       }
     }
-
 """
 
     java2js(java) should equal (expected)

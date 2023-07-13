@@ -10,6 +10,8 @@ import org.eclipse.jdt.core.dom.ASTParser
 import org.eclipse.jdt.core.dom.AST
 import org.eclipse.jdt.core.dom.CompilationUnit
 import java.nio.file.Paths
+import org.eclipse.jdt.core.JavaCore
+import java.io.OutputStream
 
 object Utils {
   import org.wololo.java2estree.compilationunit
@@ -17,6 +19,9 @@ object Utils {
   def java2js(java: String) : String = {
     val doc = new Document(java)
     val parser = ASTParser.newParser(AST.JLS11)
+    val options = JavaCore.getOptions()
+    options.put(JavaCore.COMPILER_SOURCE, "11")
+    parser.setCompilerOptions(options)
     parser.setResolveBindings(true)
     parser.setBindingsRecovery(true)
     parser.setStatementsRecovery(true)

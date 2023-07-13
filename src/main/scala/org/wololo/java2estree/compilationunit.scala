@@ -22,11 +22,10 @@ import org.eclipse.jdt.core.dom.MethodDeclaration
 
 object compilationunit extends LazyLogging {
 
-  def isDeprecated(javadoc: dom.Javadoc): Boolean = {
+  def isDeprecated(javadoc: dom.Javadoc): Boolean =
     if (javadoc != null && javadoc.tags != null)
-      javadoc.tags.asScala collect { case x: dom.TagElement => x } exists { x => x.getTagName == "@deprecated" }
+      javadoc.tags.asScala.collect({ case x: dom.TagElement => x }).exists(x => x.getTagName == "@deprecated")
     else false
-  }
 
   /**
    * @param cu Java Eclipse AST CompilationUnit
@@ -35,8 +34,8 @@ object compilationunit extends LazyLogging {
    * @param name File name without extension
    * @return ESTree Program node
    */
-  def fromCompilationUnit(cu: dom.CompilationUnit, root: Path, file: Path, name: String): Program = {
-    val types = cu.types.asScala collect { case x: dom.TypeDeclaration if !isDeprecated(x.getJavadoc) => fromTypeDeclaration(x) } flatten
+  def fromCompilationUnit(cu: dom.CompilationUnit, root: Path, file: Path, name: String): Program =
+    val types = cu.types.asScala.collect({case x: dom.TypeDeclaration if !isDeprecated(x.getJavadoc) => fromTypeDeclaration(x)}).flatten
 
     if (types.length == 0) return null
 
@@ -75,7 +74,6 @@ object compilationunit extends LazyLogging {
 
     val exportedTypes = new ExportDefaultDeclaration(classDeclaration) +: staticClassDeclarations
     new Program("module", imports ++ exportedTypes)
-  }
 
   def fromSingleVariableDeclaration(x: dom.SingleVariableDeclaration): Identifier =
     new Identifier(x.getName.getIdentifier)
@@ -83,12 +81,11 @@ object compilationunit extends LazyLogging {
   def fromParameters(parameters: java.util.List[_]) =
     parameters.asScala collect { case x: dom.SingleVariableDeclaration => fromSingleVariableDeclaration(x) }
 
-  def fromBlock(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement = {
+  def fromBlock(bs: dom.Block)(implicit td: dom.TypeDeclaration): BlockStatement =
     val statements = ArrayBuffer.empty[Statement]
     if (bs != null)
       statements ++= bs.statements.asScala collect { case statement: dom.Statement => fromStatement(statement) }
     new BlockStatement(statements)
-  }
 
   def createConstructor(constructors: Array[dom.MethodDeclaration], memberFields: Array[ExpressionStatement], hasSuper: Boolean)(implicit td: dom.TypeDeclaration) = {
     val statements = createConstructorBody(constructors, memberFields, hasSuper)
@@ -99,7 +96,7 @@ object compilationunit extends LazyLogging {
   def createConstructorBody(
       constructors: Array[dom.MethodDeclaration],
       memberFields: Array[ExpressionStatement],
-      hasSuper: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] = {
+      hasSuper: Boolean)(implicit td: dom.TypeDeclaration): Iterable[Statement] =
     
     val statements = fromOverloadedMethodDeclarations(constructors, true)
 
@@ -142,20 +139,18 @@ object compilationunit extends LazyLogging {
     */
     
     defaultStatements ++ statements
-  }
 
-  def createInterfacesProperty(interfaces: List[Identifier]): MethodDefinition = {
+  def createInterfacesProperty(interfaces: List[Identifier]): MethodDefinition =
     val returnInterfaces = new ReturnStatement(new ArrayExpression(interfaces))
     new MethodDefinition(new Identifier("interfaces_"), new FunctionExpression(List(), new BlockStatement(List(returnInterfaces))), "get", false, false)
-  }
 
   def fromTypeDeclaration(implicit td: dom.TypeDeclaration): List[Statement] = {
     val methods = td.getMethods filterNot { x => Modifier.isAbstract(x.getModifiers) || isDeprecated(x.getJavadoc) }
     val types = td.getTypes
 
     val constructors = methods filter { m => m.isConstructor() }
-    val memberFields = td.getFields map { fromFieldDeclarationMember(_) } flatten
-    val staticFields = td.getFields map { fromFieldDeclarationStatic(_) } flatten
+    val memberFields = td.getFields.map(fromFieldDeclarationMember(_)).flatten
+    val staticFields = td.getFields.map(fromFieldDeclarationStatic(_)).flatten
     
     val hasSuperclass = td.getSuperclassType != null
 
@@ -182,7 +177,7 @@ object compilationunit extends LazyLogging {
       .filter(x => Modifier.isStatic(x.getModifiers) && !x.isInterface)
       .map(fromTypeDeclaration(_))
 
-    val interfaces = td.resolveBinding.getInterfaces.map { x => new Identifier(x.getTypeDeclaration.getName) } toList
+    val interfaces = td.resolveBinding.getInterfaces.map(x => new Identifier(x.getTypeDeclaration.getName)).toList
 
     val superClass = if (hasSuperclass) {
       var superClassType = td.getSuperclassType match {
@@ -207,7 +202,7 @@ object compilationunit extends LazyLogging {
     staticMethods: Iterable[FunctionDeclaration] = List(),
     innerInterfaces: List[FunctionDeclaration] = List(),
     staticInnerClasses: Array[List[Statement]] = Array(),
-    staticFields: Array[AssignmentExpression] = Array())(implicit td: dom.TypeDeclaration): List[Statement] = {
+    staticFields: Array[AssignmentExpression] = Array())(implicit td: dom.TypeDeclaration): List[Statement] =
 
     val name = new Identifier(td.getName.getIdentifier)
 
@@ -250,6 +245,5 @@ object compilationunit extends LazyLogging {
     List(classDefinition) ++
     innerInterfaces ++
     innerInterfacesClassAssignments ++ staticInnerClasses.flatten.toList ++ staticInnerClassAssignments ++ staticFieldStatements
-  }
 
 }

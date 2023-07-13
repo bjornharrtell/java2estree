@@ -20,7 +20,7 @@ object method {
   def checkInterfaceExpression(e: Expression, typeName: String): CallExpression =
     new CallExpression(new Identifier("hasInterface"), List(e, new Identifier(typeName)))
 
-  def varToBinaryExpression(binding: dom.ITypeBinding, i: Int) = {
+  def varToBinaryExpression(binding: dom.ITypeBinding, i: Int) =
     val identifier = new MemberExpression(new Identifier("arguments"), new Literal(i, i.toString), true)
     val isInterface = binding.isInterface
     // remove parameterized type stuff
@@ -37,20 +37,17 @@ object method {
       checkInterfaceExpression(identifier, typeName)
     else
       toInstanceOf(identifier, typeName)
-  }
 
-  def argsToLet(patterns: List[Identifier]): VariableDeclaration = {
+  def argsToLet(patterns: List[Identifier]): VariableDeclaration =
     val declarators = patterns.zipWithIndex.map({
       case (e, i) =>
         new VariableDeclarator(e, new MemberExpression(new Identifier("arguments"), new Literal(i, i.toString()), true))
     })
-
     new VariableDeclaration(declarators, "let")
-  }
 
-  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean)(implicit td: dom.TypeDeclaration) = {
-    def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): List[Statement] = {
-      def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]): Statement = {
+  def fromOverloadedMethodDeclarations(x: Iterable[dom.MethodDeclaration], returns: Boolean)(implicit td: dom.TypeDeclaration) =
+    def fromSameArgLength(declarations: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): List[Statement] =
+      def fromTypeOverloads(mds: Iterable[dom.MethodDeclaration]): Statement =
         if (mds.size > 0) {
           val es = mds.map(d => d.resolveBinding).head.getParameterTypes.zipWithIndex map { case (x, i) => varToBinaryExpression(x, i) }
           // TODO: make this recursive
@@ -75,7 +72,6 @@ object method {
           val consequent = new BlockStatement(statements)
           new IfStatement(test, consequent, fromTypeOverloads(mds.tail))
         } else null
-      }
       
       if (declarations.size > 1) {
                 
@@ -94,7 +90,6 @@ object method {
         if (patterns.length > 0) argsToLet(patterns) +: bodyStatements
         else bodyStatements
       }
-    }
 
     val cases = x.groupBy({ _.parameters.asScala.length }).toList.sortBy(_._1).collect({
       case (argsCount, methods) => (new Literal(argsCount, argsCount.toString), fromSameArgLength(methods))
@@ -107,9 +102,8 @@ object method {
       val ifStatement = toIf(new IfStatement(test, new BlockStatement(cases.head._2), null), cases.tail.toBuffer)
       List(ifStatement)
     }
-  }
 
-  def toIf(ifs: IfStatement, rest: Buffer[(Literal, List[Statement])]): IfStatement = {
+  def toIf(ifs: IfStatement, rest: Buffer[(Literal, List[Statement])]): IfStatement =
     if (rest.length == 0) {
       ifs
     } else {
@@ -117,9 +111,8 @@ object method {
       val alternate = new IfStatement(test, new BlockStatement(rest.head._2), null)
       new IfStatement(ifs.test, ifs.consequent, toIf(alternate, rest.tail))
     }
-  }
 
-  def specificMethodConditional(m: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration): IfStatement = {
+  def specificMethodConditional(m: dom.MethodDeclaration)(implicit td: dom.TypeDeclaration): IfStatement =
     val argsLength = new MemberExpression("arguments", "length")
     //var test = new BinaryExpression("===", argsLength, new Literal(m.parameters.size(), m.parameters.size().toString()))
 
@@ -149,12 +142,11 @@ object method {
       new ReturnStatement(superCall)
     } else null
     new IfStatement(test, consequent, alternate)
-  }
 
   /**
    * Check superClass for overloads that are not overridden by m
    */
-  def hasSuperOverloads(m: dom.MethodDeclaration, superClass: dom.ITypeBinding): Boolean = {
+  def hasSuperOverloads(m: dom.MethodDeclaration, superClass: dom.ITypeBinding): Boolean =
     val binding = m.resolveBinding
     if (superClass != null)
       if (superClass.getDeclaredMethods.exists(x => x.getName == m.getName.getIdentifier && !binding.overrides(x)))
@@ -162,9 +154,8 @@ object method {
       else
         hasSuperOverloads(m, superClass.getSuperclass)
     else false
-  }
   
-  def findSuperOverloads(m: dom.MethodDeclaration, superClass: dom.ITypeBinding, mbs: List[dom.IMethodBinding]): Iterable[dom.IMethodBinding] = {
+  def findSuperOverloads(m: dom.MethodDeclaration, superClass: dom.ITypeBinding, mbs: List[dom.IMethodBinding]): Iterable[dom.IMethodBinding] =
     val binding = m.resolveBinding
     if (superClass != null) {
       val methodBindings = superClass.getDeclaredMethods.filter(x => x.getName == m.getName.getIdentifier && !binding.overrides(x))
@@ -172,9 +163,8 @@ object method {
     } else {
       mbs
     }
-  }
 
-  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): FunctionDeclaration = {
+  def fromMethodDeclarations(x: Iterable[dom.MethodDeclaration])(implicit td: dom.TypeDeclaration): FunctionDeclaration =
         
     // check if single method has non overrided overload
     val binding = x.head.resolveBinding
@@ -206,9 +196,8 @@ object method {
         false
       )
     }
-  }
 
-  def fromFieldDeclarationMember(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = {
+  def fromFieldDeclarationMember(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) =
     val isInterface = td.isInterface()
     val isStatic = dom.Modifier.isStatic(declaration.getModifiers)
     val isProtected = dom.Modifier.isProtected(declaration.getModifiers)
@@ -222,9 +211,8 @@ object method {
           toExpression(field.getInitializer)
         ))
     }
-  }
 
-  def fromFieldDeclarationStatic(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) = {
+  def fromFieldDeclarationStatic(declaration: dom.FieldDeclaration)(implicit td: dom.TypeDeclaration) =
     val isInterface = td.isInterface()
     var isStatic = dom.Modifier.isStatic(declaration.getModifiers)
     declaration.fragments.asScala collect {
@@ -237,5 +225,4 @@ object method {
         new AssignmentExpression("=", left, right)
       }
     }
-  }
 }

@@ -11,7 +11,7 @@ object statement {
   def fromVariableDeclarationFragment(vd: dom.VariableDeclarationFragment)(implicit td: dom.TypeDeclaration) =
     new VariableDeclarator(new Identifier(vd.getName.getIdentifier), toExpression(vd.getInitializer))
 
-  def fromSwitchCases(x: Buffer[dom.Statement], accu: List[SwitchCase] = List())(implicit td: dom.TypeDeclaration): List[SwitchCase] = {
+  def fromSwitchCases(x: Buffer[dom.Statement], accu: List[SwitchCase] = List())(implicit td: dom.TypeDeclaration): List[SwitchCase] =
     val switchCase = x.head.asInstanceOf[dom.SwitchCase]
     val statements = x.tail.takeWhile { !_.isInstanceOf[dom.SwitchCase] } map { x => fromStatement(x) }
     val test = if (switchCase.getExpression == null) null else toExpression(switchCase.getExpression)
@@ -20,44 +20,38 @@ object statement {
       fromSwitchCases(x.drop(statements.length + 1), switchCases)
     else
       switchCases
-  }
 
-  def fromCatchClauses(clauses: Iterable[dom.CatchClause], name: Identifier)(implicit td: dom.TypeDeclaration): Statement = {
-    def createIfStatement(): IfStatement = {
+  def fromCatchClauses(clauses: Iterable[dom.CatchClause], name: Identifier)(implicit td: dom.TypeDeclaration): Statement =
+    def createIfStatement(): IfStatement =
       val test = toInstanceOf(name, clauses.head.getException.getType.resolveBinding().getName)
       val consequent = fromBlock(clauses.head.getBody)
       new IfStatement(test, consequent, fromCatchClauses(clauses.tail, name))
-    }
     if (clauses.size > 0)
       createIfStatement()
     else
       new ThrowStatement(name)
-  }
 
   def fromFragments(fragments: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     fragments.asScala collect { case x: dom.VariableDeclarationFragment => fromVariableDeclarationFragment(x) }
 
-  def fromForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) = {
-    def createInit(): Node = {
-      def createVarDecl(): VariableDeclaration = {
+  def fromForStatement(x: dom.ForStatement)(implicit td: dom.TypeDeclaration) =
+    def createInit(): Node =
+      def createVarDecl(): VariableDeclaration =
         val vde = x.initializers.get(0).asInstanceOf[dom.VariableDeclarationExpression]
         new VariableDeclaration(fromFragments(vde.fragments), "let")
-      }
       if (x.initializers.size == 0)
         null
       else if (x.initializers.size == 1 && x.initializers.get(0).isInstanceOf[dom.VariableDeclarationExpression])
         createVarDecl()
       else
         new SequenceExpression(toExpressions(x.initializers))
-    }
     val init = createInit()
     val update: Expression = if (x.updaters.size() == 0) null
     else if (x.updaters.size() == 1) toExpressions(x.updaters).head
     else new SequenceExpression(toExpressions(x.updaters))
     new ForStatement(init, toExpression(x.getExpression), update, fromStatement(x.getBody))
-  }
 
-  def fromStatement(s: dom.Statement)(implicit td: dom.TypeDeclaration): Statement = s match {
+  def fromStatement(s: dom.Statement)(implicit td: dom.TypeDeclaration): Statement = s match
     case x: dom.EmptyStatement =>
       new EmptyStatement()
     case x: dom.ReturnStatement =>
@@ -121,5 +115,4 @@ object statement {
     //logger.debug(s"Unexpected statement (${if (x==null) x else x.toString()})")
     //new BlockStatement(List())
     //}
-  }
 }

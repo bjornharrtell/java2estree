@@ -8,7 +8,7 @@ import java.nio.file.Paths
 import org.eclipse.core
 
 object importdeclaration {
-  def makeRelative(path: Path, root: Path, file: Path): String = {
+  def makeRelative(path: Path, root: Path, file: Path): String =
     var parent = file.getParent
     if (parent == null)
         parent = Path.of("");
@@ -18,9 +18,8 @@ object importdeclaration {
       "./" + relPath.toString
     else
       relPath.toString
-  }
 
-  def fromImportDeclaration(id: dom.ImportDeclaration, root: Path, file: Path): (String, String) = {
+  def fromImportDeclaration(id: dom.ImportDeclaration, root: Path, file: Path): (String, String) =
     val orgname = id.getName.getFullyQualifiedName
     val path = orgname.replace('.', '/')
     val name = orgname.split('.').last
@@ -29,15 +28,13 @@ object importdeclaration {
     (name -> makeRelative(Paths.get(path), root, file))
     //else 
     //  (name -> path)
-  }
 
-  def createImport(name: String, path: String) = {
+  def createImport(name: String, path: String) =
     new ImportDeclaration(
       List(new ImportDefaultSpecifier(new Identifier(name))),
       new Literal(s"'${path}.js'", s"'${path}.js'"))
-  }
 
-  def builtinImports(root: Path, file: Path): Map[String, String] = {
+  def builtinImports(root: Path, file: Path): Map[String, String] =
     Map(
       ("System" -> "java/lang/System"),
       ("Comparable" -> "java/lang/Comparable"),
@@ -53,9 +50,8 @@ object importdeclaration {
       ("IllegalArgumentException" -> "java/lang/IllegalArgumentException"),
       ("UnsupportedOperationException" -> "java/lang/UnsupportedOperationException"),
       ("hasInterface" -> "hasInterface")).transform((name: String, path: String) => makeRelative(Paths.get(path), root, file))
-  }
 
-  def importsFromName(name: String, root: Path, ignore: String = null): Map[String, String] = {
+  def importsFromName(name: String, root: Path, ignore: String = null): Map[String, String] =
     val subpath = name.replace('.', '/')
     val subname = name.split('.').last
 
@@ -82,5 +78,4 @@ object importdeclaration {
     }
 
     Map(pairs: _*)
-  }
 }

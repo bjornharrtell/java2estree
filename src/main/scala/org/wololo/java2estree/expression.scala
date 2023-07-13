@@ -16,7 +16,7 @@ object expression extends LazyLogging {
   else
     resolveQualifiedName(name.asInstanceOf[dom.QualifiedName])
 
-  def resolveSimpleName(s: dom.SimpleName) = {
+  def resolveSimpleName(s: dom.SimpleName) =
     if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
     val b = s.resolveBinding
     val isPrivate = dom.Modifier.isPrivate(b.getModifiers)
@@ -37,9 +37,8 @@ object expression extends LazyLogging {
       case b: dom.ITypeBinding => identifier
       case b: dom.IPackageBinding => identifier
     }
-  }
 
-  def resolveQualifiedName(q: dom.QualifiedName): Expression = {
+  def resolveQualifiedName(q: dom.QualifiedName): Expression =
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
     val b = q.getQualifier.resolveBinding
     val b2 = q.resolveBinding
@@ -55,7 +54,6 @@ object expression extends LazyLogging {
       case b: dom.IPackageBinding =>
         new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
     }
-  }
 
   def translateOp(op: String) = op match {
     case "==" => "==="
@@ -75,8 +73,7 @@ object expression extends LazyLogging {
   /**
    * Convert op and expressions from a dom.InfixExpression and truncate if needed.
    */
-  def toBinaryExpression(op: String, left: Expression, rest: Buffer[dom.Expression], shouldTrunc: Boolean)(implicit td: dom.TypeDeclaration): Expression = {
-
+  def toBinaryExpression(op: String, left: Expression, rest: Buffer[dom.Expression], shouldTrunc: Boolean)(implicit td: dom.TypeDeclaration): Expression =
     def be = new BinaryExpression(op, left, toExpression(rest(0)))
     if (rest.length == 0)
       left
@@ -84,21 +81,19 @@ object expression extends LazyLogging {
       if (shouldTrunc) truncCall(be) else be
     else if (shouldTrunc) toBinaryExpression(op, truncCall(be), rest.tail, shouldTrunc)
     else toBinaryExpression(op, be, rest.tail, shouldTrunc)
-  }
 
-  def toInstanceOf(e: Expression, typeName: String) = {
+  def toInstanceOf(e: Expression, typeName: String) =
     if (typeName == "String" || typeName == "char") {
       val typeof = new UnaryExpression("typeof", true, e)
       new BinaryExpression("===", typeof, new Literal("string", "\"string\""))
     } else {
       new BinaryExpression("instanceof", e, new Identifier(typeName))
     }
-  }
 
   def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     expressions.asScala collect { case x: dom.Expression => toExpression(x) }
 
-  def create2DArrayExpression(x: Expression, y: Expression): CallExpression = {
+  def create2DArrayExpression(x: Expression, y: Expression): CallExpression =
     val xCall = new CallExpression(new Identifier("Array"), List(x))
     val yCall = new CallExpression(new Identifier("Array"), List(y))
     val yArrow = new ArrowFunctionExpression(List(), yCall, false, true)
@@ -107,9 +102,8 @@ object expression extends LazyLogging {
     val innerCall = new CallExpression(innerMember, List())
     val outerMember = new MemberExpression(innerCall, "map")
     new CallExpression(outerMember, List(yArrow))
-  }
 
-  def toExpression(e: dom.Expression)(implicit td: dom.TypeDeclaration): Expression = {
+  def toExpression(e: dom.Expression)(implicit td: dom.TypeDeclaration): Expression =
     e match {
       case nl: dom.NullLiteral   => new Literal(null, "null")
       case x: dom.SimpleName     => resolveSimpleName(x)
@@ -187,7 +181,7 @@ object expression extends LazyLogging {
           val properties = methods.map { x => new MethodDefinition(x.id, new FunctionExpression(x.params, x.body), "method", false, false) }.toList
           val binding = x.getAnonymousClassDeclaration.resolveBinding
           if (binding.getInterfaces.length > 0) {
-            val interfaces = binding.getInterfaces.map { x => new Identifier(x.getName) } toList
+            val interfaces = binding.getInterfaces.map(x => new Identifier(x.getName)).toList
             val interfacesProperty = compilationunit.createInterfacesProperty(interfaces)
             val classExpression = new ClassExpression(new ClassBody(interfacesProperty +: properties), null);
             new NewExpression(classExpression, toExpressions(x.arguments))
@@ -251,5 +245,4 @@ object expression extends LazyLogging {
         new Literal("null", "null")
       }*/
     }
-  }
 }

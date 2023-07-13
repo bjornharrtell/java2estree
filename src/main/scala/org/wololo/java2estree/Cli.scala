@@ -24,12 +24,12 @@ object Cli extends App with LazyLogging {
     "/jts/awt/",
     "/jts/io/",
     "/jts/geom/impl/PackedCoordinateSequence.java",
-	  "/jts/util/Debug.java",
-	  "/jts/util/Stopwatch.java",
-	  "/jts/geom/Geometry.java",
-	  "/jts/index/quadtree/DoubleBits.java",
-	  "/jts/geom/TopologyException.java",
-	  "/jts/precision/CommonBits.java"
+    "/jts/util/Debug.java",
+    "/jts/util/Stopwatch.java",
+    "/jts/geom/Geometry.java",
+    "/jts/index/quadtree/DoubleBits.java",
+    "/jts/geom/TopologyException.java",
+    "/jts/precision/CommonBits.java"
   ).map(e => ".*" + e + ".*")
   
   val root = Paths.get(args(0))
@@ -41,15 +41,14 @@ object Cli extends App with LazyLogging {
   
   walk(root.toFile)
   
-  def walk(dir: File) : Unit = {
+  def walk(dir: File) : Unit =
     dir.listFiles().foreach { 
       case x if x.isDirectory() => walk(x) 
       case x if x.getName.endsWith("java") => convert(x)
       case x => Nil
     }
-  }
   
-  def convert(file: File) : Unit = {
+  def convert(file: File) : Unit =
     //if (!file.getPath.matches(".*/jts/index/intervalrtree/SortedPackedIntervalRTree.java.*")) return
     //if (!file.getPath.matches(".*PrecisionReducerCoordinateOperation.*")) return
     //if (!file.getPath.matches(".*GeometryEditor.*")) return
@@ -87,5 +86,4 @@ object Cli extends App with LazyLogging {
     new File(fulloutpath).mkdirs()
     val os = Files.newOutputStream(Paths.get(fulloutpath, name + ".ast"), StandardOpenOption.CREATE)
     mapper.writeValue(os, program)
-  }
 }

@@ -1,9 +1,9 @@
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import Utils.java2js
 
-class InfixSpec extends FlatSpec with Matchers {
+class InfixSpec extends AnyFlatSpec with Matchers {
 
   import Utils._
   

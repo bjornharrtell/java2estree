@@ -5,10 +5,14 @@ import java.io.File
 import org.wololo.estree._
 import java.nio.file.Path
 import java.nio.file.Paths
+import org.eclipse.core
 
 object importdeclaration {
   def makeRelative(path: Path, root: Path, file: Path): String = {
-    val folder = root.relativize(file.getParent)
+    var parent = file.getParent
+    if (parent == null)
+        parent = Path.of("");
+    val folder = root.relativize(parent)
     val relPath = folder.relativize(path)
     if (!relPath.toString().startsWith(".") && !relPath.toString().startsWith("/"))
       "./" + relPath.toString

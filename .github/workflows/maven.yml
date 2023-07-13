@@ -17,5 +17,9 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
+    - name: Setup Yarn
+      uses: mskelton/setup-yarn@v1.4.0
+    - name: Yarn
+      run: yarn
     - name: Test with Maven
       run: mvn -Dmaven.javadoc.skip=true -Dgpg.skip=true -B test

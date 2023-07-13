@@ -18,26 +18,18 @@ class StringSpec extends AnyFlatSpec with Matchers {
         l = "".length();
       }
     }
-
 """
     
     val expected =
 """
     export default class Test {
-      get interfaces_() {
-        return [];
-      }
       test(a) {
-        var l = a.length;
-        var b = "";
+        let l = a.length;
+        let b = "";
         l = b.length;
-        l = "".length;
-      }
-      getClass() {
-        return Test;
+        l = ("").length;
       }
     }
-
 """
 
     java2js(java) should equal (expected)

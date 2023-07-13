@@ -19,15 +19,8 @@ class MethodSpec extends AnyFlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get interfaces_() {
-        return [];
-      }
       add() {}
-      getClass() {
-        return Test;
-      }
     }
-
 """
 
     java2js(java) should equal (expected)
@@ -45,15 +38,8 @@ class MethodSpec extends AnyFlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get interfaces_() {
-        return [];
-      }
       add(x, y) {}
-      getClass() {
-        return Test;
-      }
     }
-
 """
      java2js(java) should equal (expected)
   }
@@ -78,36 +64,18 @@ class MethodSpec extends AnyFlatSpec with Matchers {
     val expected =
 """
     export default class Test {
-      get interfaces_() {
-        return [];
-      }
-      add(...args) {
-        const overloads = (...args) => {
-          switch (args.length) {
-            case 0:
-              return ((...args) => {
-                let [] = args;
-                return null;
-              })(...args);
-            case 1:
-              return ((...args) => {
-                let [x] = args;
-                return x;
-              })(...args);
-            case 2:
-              return ((...args) => {
-                let [x, y] = args;
-                return x + y;
-              })(...args);
-          }
-        };
-        return overloads.apply(this, args);
-      }
-      getClass() {
-        return Test;
+      add() {
+        if (arguments.length === 0) {
+          return null;
+        } else if (arguments.length === 1) {
+          let x = arguments[0];
+          return x;
+        } else if (arguments.length === 2) {
+          let x = arguments[0], y = arguments[1];
+          return x + y;
+        }
       }
     }
-
 """
 
     java2js(java) should equal (expected)

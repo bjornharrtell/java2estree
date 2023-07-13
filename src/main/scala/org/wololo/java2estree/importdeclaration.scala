@@ -7,7 +7,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import org.eclipse.core
 
-object importdeclaration {
+object importdeclaration:
   def makeRelative(path: Path, root: Path, file: Path): String =
     var parent = file.getParent
     if (parent == null)
@@ -55,27 +55,24 @@ object importdeclaration {
     val subpath = name.replace('.', '/')
     val subname = name.split('.').last
 
-    def isJava(file: File): Boolean = {
+    def isJava(file: File): Boolean =
       val split = file.getName.split('.')
       if (split.length != 2) return false
       if (split(1) == "java") return true
       return false
-    }
 
     val file = Paths.get(root.toString, "//", subpath)
     val files = file.toFile.listFiles
     if (files == null) return Map()
 
     val pairs = files.filter({ x => x.getName.split('.')(0) != ignore }).collect {
-      case x if isJava(x) => {
+      case x if isJava(x) =>
         val name = x.getName.split('.')(0)
         val path = subpath + '/' + name
         //if (path.startsWith("org"))
         (name -> makeRelative(Paths.get(path), root, x.toPath))
         //else 
         //  (name -> path)
-      }
     }
 
     Map(pairs: _*)
-}

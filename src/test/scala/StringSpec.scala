@@ -9,7 +9,7 @@ class StringSpec extends AnyFlatSpec with Matchers {
   
   "String length method calls" should "translate into length property access" in {
     val java =
-"""
+    """
     class Test {
       public void test(String a) {
         int l = a.length();
@@ -21,7 +21,7 @@ class StringSpec extends AnyFlatSpec with Matchers {
 """
     
     val expected =
-"""
+    """
     export default class Test {
       test(a) {
         let l = a.length;

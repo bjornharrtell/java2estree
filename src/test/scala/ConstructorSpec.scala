@@ -9,7 +9,7 @@ class ConstructorSpec extends AnyFlatSpec with Matchers {
   
   "A Class constructor" should "translate into a Class constructor" in {
     val java =
-"""
+    """
     class Test {
       Test() {
       }
@@ -17,7 +17,7 @@ class ConstructorSpec extends AnyFlatSpec with Matchers {
 """
     
     val expected =
-"""
+    """
     export default class Test {}
 """
 
@@ -26,7 +26,7 @@ class ConstructorSpec extends AnyFlatSpec with Matchers {
   
   "Constructor parameters" should "translate into a constructor parameters" in {
     val java =
-"""
+    """
     class Test {
       Test(int x, int y) {
       }
@@ -34,7 +34,7 @@ class ConstructorSpec extends AnyFlatSpec with Matchers {
 """
     
     val expected =
-"""
+    """
     export default class Test {
       constructor() {
         Test.constructor_.apply(this, arguments);
@@ -50,7 +50,7 @@ class ConstructorSpec extends AnyFlatSpec with Matchers {
   
   "Constructor member access" should "translate into member access" in {
     val java =
-"""
+    """
     class Test {
       int x;
       Test(int x) {
@@ -60,7 +60,7 @@ class ConstructorSpec extends AnyFlatSpec with Matchers {
 """
     
     val expected =
-"""
+    """
     export default class Test {
       constructor() {
         Test.constructor_.apply(this, arguments);

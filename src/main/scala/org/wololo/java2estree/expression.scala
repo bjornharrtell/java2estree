@@ -1,13 +1,13 @@
 package org.wololo.java2estree
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.Buffer
 import org.wololo.estree._
 import org.eclipse.jdt.core.dom
 import com.typesafe.scalalogging.LazyLogging
 import method._
 
-object expression extends LazyLogging {
+object expression extends LazyLogging:
   val trunc = new MemberExpression("Math", "trunc")
   def truncCall(e: Expression) = new CallExpression(trunc, List(e))
 
@@ -24,7 +24,7 @@ object expression extends LazyLogging {
     val isStatic = dom.Modifier.isStatic(b.getModifiers)
     val name = s.getFullyQualifiedName
     val identifier = new Identifier(name)
-    b match {
+    b match
       case b: dom.IVariableBinding if b.isParameter() => identifier
       case b: dom.IVariableBinding if !b.isField() => identifier
       case b: dom.IVariableBinding if !b.isParameter() =>
@@ -36,7 +36,6 @@ object expression extends LazyLogging {
         new MemberExpression(member, prefix + s.getFullyQualifiedName)
       case b: dom.ITypeBinding => identifier
       case b: dom.IPackageBinding => identifier
-    }
 
   def resolveQualifiedName(q: dom.QualifiedName): Expression =
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)
@@ -55,11 +54,10 @@ object expression extends LazyLogging {
         new MemberExpression(resolve(q.getQualifier), q.getName.getIdentifier)
     }
 
-  def translateOp(op: String) = op match {
+  def translateOp(op: String) = op match
     case "==" => "==="
     case "!=" => "!=="
     case x    => x
-  }
 
   def translateToken(token: String) =
     if (token.last == 'L')
@@ -83,12 +81,11 @@ object expression extends LazyLogging {
     else toBinaryExpression(op, be, rest.tail, shouldTrunc)
 
   def toInstanceOf(e: Expression, typeName: String) =
-    if (typeName == "String" || typeName == "char") {
+    if (typeName == "String" || typeName == "char")
       val typeof = new UnaryExpression("typeof", true, e)
       new BinaryExpression("===", typeof, new Literal("string", "\"string\""))
-    } else {
+    else
       new BinaryExpression("instanceof", e, new Identifier(typeName))
-    }
 
   def toExpressions(expressions: java.util.List[_])(implicit td: dom.TypeDeclaration) =
     expressions.asScala collect { case x: dom.Expression => toExpression(x) }
@@ -104,7 +101,7 @@ object expression extends LazyLogging {
     new CallExpression(outerMember, List(yArrow))
 
   def toExpression(e: dom.Expression)(implicit td: dom.TypeDeclaration): Expression =
-    e match {
+    e match
       case nl: dom.NullLiteral   => new Literal(null, "null")
       case x: dom.SimpleName     => resolveSimpleName(x)
       case x: dom.QualifiedName  => resolveQualifiedName(x)
@@ -125,15 +122,15 @@ object expression extends LazyLogging {
       case x: dom.TypeLiteral =>
         new Identifier(x.getType.toString)
       case x: dom.ArrayCreation =>
-        if (x.dimensions().asScala.length == 1) {
+        if (x.dimensions().asScala.length == 1)
           val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
           val fill = new MemberExpression(new NewExpression(new Identifier("Array"), List(r)), "fill")
           new CallExpression(fill, List(new Literal(null, "null")))
-        } else if (x.dimensions().asScala.length > 1) {
+        else if (x.dimensions().asScala.length > 1)
           val r = toExpression(x.dimensions().get(0).asInstanceOf[dom.Expression])
           val c = toExpression(x.dimensions().get(1).asInstanceOf[dom.Expression])
           create2DArrayExpression(r, c)
-        } else if (x.getInitializer != null)
+        else if (x.getInitializer != null)
           new ArrayExpression(toExpressions(x.getInitializer.expressions))
         else
           new ArrayExpression(List())
@@ -176,37 +173,33 @@ object expression extends LazyLogging {
         else
           toExpression(x.getExpression)
       case x: dom.ClassInstanceCreation =>
-        if (x.getAnonymousClassDeclaration != null) {
+        if (x.getAnonymousClassDeclaration != null)
           val methods = x.getAnonymousClassDeclaration.bodyDeclarations.asScala collect { case x: dom.MethodDeclaration => fromMethodDeclarations(List(x)) }
           val properties = methods.map { x => new MethodDefinition(x.id, new FunctionExpression(x.params, x.body), "method", false, false) }.toList
           val binding = x.getAnonymousClassDeclaration.resolveBinding
-          if (binding.getInterfaces.length > 0) {
+          if (binding.getInterfaces.length > 0)
             val interfaces = binding.getInterfaces.map(x => new Identifier(x.getName)).toList
             val interfacesProperty = compilationunit.createInterfacesProperty(interfaces)
-            val classExpression = new ClassExpression(new ClassBody(interfacesProperty +: properties), null);
+            val classExpression = new ClassExpression(new ClassBody(interfacesProperty +: properties), null)
             new NewExpression(classExpression, toExpressions(x.arguments))
-          } else {
-            val classExpression = new ClassExpression(new ClassBody(properties), null);
+          else
+            val classExpression = new ClassExpression(new ClassBody(properties), null)
             new NewExpression(classExpression, toExpressions(x.arguments))
-          }
-        } else {
-          var simpleType = x.getType match {
+        else
+          var simpleType = x.getType match
             case x: dom.SimpleType => x
             case pt: dom.ParameterizedType => pt.getType.asInstanceOf[dom.SimpleType]
-          }
           var name = simpleType.getName.getFullyQualifiedName
           new NewExpression(new Identifier(name), toExpressions(x.arguments))
-        }
       case x: dom.FieldAccess =>
         val b = x.resolveFieldBinding
         val isStatic = dom.Modifier.isStatic(b.getModifiers)
         val isPrivate = dom.Modifier.isPrivate(b.getModifiers)
         val isProtected = dom.Modifier.isProtected(b.getModifiers)
         val prefix = if ((isPrivate || isProtected) && !isStatic) "_" else "" 
-        x.getExpression match {
+        x.getExpression match
           case xe: dom.ThisExpression => new MemberExpression(new ThisExpression(), prefix + x.getName.getIdentifier)
           case xe: dom.Expression     => new MemberExpression(toExpression(x.getExpression), prefix + x.getName.getIdentifier)
-        }
       case x: dom.MethodInvocation =>
         if (x.resolveMethodBinding == null)
           throw new RuntimeException("Cannot resolve binding of MethodInvocation when parsing " + x + " with parent " + x.getParent)
@@ -220,12 +213,11 @@ object expression extends LazyLogging {
         val declaringClassName = binding.getDeclaringClass.getName
         val identifier = x.getName.getIdentifier
         // NOTE: special case for String.equals
-        if (declaringClassName == "String" && identifier == "equals") {
+        if (declaringClassName == "String" && identifier == "equals")
           // TODO: assumed name of callee
           val left = new MemberExpression(new ThisExpression(), "name")
           val right = toExpressions(x.arguments).head
           return new BinaryExpression("===", left, right)
-        }
         val name = if (declaringClassName == "Math" && identifier == "rint") "round" else identifier
         val callee = new MemberExpression(t, name)
         if (binding.getDeclaringClass.getName == "String" && name == "length") callee
@@ -233,16 +225,14 @@ object expression extends LazyLogging {
       case x: dom.SuperFieldAccess =>
         throw new RuntimeException("SuperFieldAccess is unsupported")
       case x: dom.SuperMethodInvocation =>
-        if (td.getSuperclassType != null) {
+        if (td.getSuperclassType != null)
           val method = new MemberExpression(new Super(), x.getName.getIdentifier)
           val call = new MemberExpression(method, "call")
           new CallExpression(call, new ThisExpression() +: toExpressions(x.arguments))
-        } else new Literal(null, "null") // NOTE: this happens when superclass is out of source tree
+        else new Literal(null, "null") // NOTE: this happens when superclass is out of source tree
       case null =>
         new Literal(null, "null")
       /*case x => {
         logger.debug(s"Unexpected expression ($x})")
         new Literal("null", "null")
       }*/
-    }
-}

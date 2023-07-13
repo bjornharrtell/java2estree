@@ -1,13 +1,13 @@
 package org.wololo.java2estree
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.Buffer
 import org.wololo.estree._
 import compilationunit._
 import expression._
 import org.eclipse.jdt.core.dom
 
-object statement {
+object statement:
   def fromVariableDeclarationFragment(vd: dom.VariableDeclarationFragment)(implicit td: dom.TypeDeclaration) =
     new VariableDeclarator(new Identifier(vd.getName.getIdentifier), toExpression(vd.getInitializer))
 
@@ -97,14 +97,13 @@ object statement {
     case x: dom.TryStatement =>
       val block = fromBlock(x.getBody)
       val finalizer = fromBlock(x.getFinally)
-      if (x.catchClauses.size() > 0) {
+      if (x.catchClauses.size() > 0)
         val name = new Identifier(x.catchClauses().get(0).asInstanceOf[dom.CatchClause].getException.getName.getIdentifier)
         val cases = new BlockStatement(List(fromCatchClauses(x.catchClauses.asScala collect { case x: dom.CatchClause => x }, name)))
         val handler = new CatchClause(name, cases)
         new TryStatement(block, handler, finalizer)
-      } else {
+      else
         new TryStatement(block, null, finalizer)
-      }
     case x: dom.ThrowStatement => new ThrowStatement(toExpression(x.getExpression))
     case x: dom.SynchronizedStatement =>
       fromBlock(x.getBody)
@@ -115,4 +114,3 @@ object statement {
     //logger.debug(s"Unexpected statement (${if (x==null) x else x.toString()})")
     //new BlockStatement(List())
     //}
-}

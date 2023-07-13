@@ -136,7 +136,7 @@ class Property(
   val method: Boolean = false,
   val shorthand: Boolean = false
 ) extends Node {
-  def this(key: String, value: Expression) {
+  def this(key: String, value: Expression) = {
     this(new Identifier(key), value)
   }
 }
@@ -196,13 +196,13 @@ class MemberExpression (
   val property: Expression,
   val computed: Boolean = false
 ) extends Expression with Pattern {
-  def this(`object`: String, property: String) {
+  def this(`object`: String, property: String) = {
     this(new Identifier(`object`), new Identifier(property)) 
   }
-  def this(`object`: Node, property: String) {
+  def this(`object`: Node, property: String) = {
     this(`object`, new Identifier(property)) 
   }
-  def this(`object`: String, property: Expression) {
+  def this(`object`: String, property: Expression) = {
     this(new Identifier(`object`), property) 
   }
 }

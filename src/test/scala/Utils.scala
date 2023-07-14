@@ -1,7 +1,6 @@
 import java.io.InputStreamReader
 import java.io.StringReader
 import scala.jdk.CollectionConverters._
-import org.wololo.java2estree.compilationunit
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.apache.commons.io.IOUtils
@@ -12,10 +11,9 @@ import org.eclipse.jdt.core.dom.CompilationUnit
 import java.nio.file.Paths
 import org.eclipse.jdt.core.JavaCore
 import java.io.OutputStream
+import org.wololo.java2estree.fromCompilationUnit
 
-object Utils {
-  import org.wololo.java2estree.compilationunit
-  
+object Utils {  
   def java2js(java: String) : String = {
     val doc = new Document(java)
     val parser = ASTParser.newParser(AST.getJLSLatest())
@@ -29,7 +27,7 @@ object Utils {
     parser.setUnitName("Test.java")
     parser.setSource(java.toCharArray())
     val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
-    val program = compilationunit.fromCompilationUnit(cu, Paths.get(""), Paths.get("Test.java"), "Test")
+    val program = fromCompilationUnit(cu, Paths.get(""), Paths.get("Test.java"), "Test")
     val mapper = new ObjectMapper
     mapper.registerModule(DefaultScalaModule)
     val pb = new ProcessBuilder(List("./node_modules/astring/bin/astring", "--indent", "  ", "--starting-indent-level", "2").asJava)

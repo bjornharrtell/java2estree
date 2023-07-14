@@ -11,7 +11,9 @@ def fromVariableDeclarationFragment(vd: dom.VariableDeclarationFragment)(implici
 def fromSwitchCases(x: Buffer[dom.Statement], accu: List[SwitchCase] = List())(implicit td: dom.TypeDeclaration): List[SwitchCase] =
   val switchCase = x.head.asInstanceOf[dom.SwitchCase]
   val statements = x.tail.takeWhile { !_.isInstanceOf[dom.SwitchCase] } map { x => fromStatement(x) }
-  val test = if (switchCase.getExpression == null) null else toExpression(switchCase.getExpression)
+  var expressions = switchCase.expressions()
+  val test = if (expressions.size() == 0) null
+    else toExpression(expressions.get(0).asInstanceOf[org.eclipse.jdt.core.dom.Expression])
   val switchCases = accu :+ new SwitchCase(test, statements)
   if (x.length - 1 - statements.length > 0)
     fromSwitchCases(x.drop(statements.length + 1), switchCases)

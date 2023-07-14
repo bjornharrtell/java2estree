@@ -17,8 +17,12 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import scala.concurrent.Channel
 import java.nio.channels.Channels
+import com.typesafe.scalalogging.Logger
 
-object Cli extends LazyLogging:
+val logger = Logger("java2estree")
+
+object Cli:
+
   def main(args: Array[String]): Unit =
     val skipList = List(
       "/jts/awt/",
@@ -40,7 +44,7 @@ object Cli extends LazyLogging:
     logger.info(s"Walking ${root}")
     
     walk(root.toFile)
-  
+
     def walk(dir: File): Unit =
       dir.listFiles.foreach({
         case x if x.isDirectory() => walk(x) 
@@ -73,7 +77,7 @@ object Cli extends LazyLogging:
       val bytes = Files.readAllBytes(file.toPath()).map(b => b.toChar)
       parser.setSource(bytes)
       val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
-      val program = compilationunit.fromCompilationUnit(cu, root, file.toPath, name)
+      val program = fromCompilationUnit(cu, root, file.toPath, name)
       if (program == null)
         logger.info(s"Turned up empty for ${file.getPath}")
         return

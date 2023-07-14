@@ -17,25 +17,27 @@ object expression extends LazyLogging:
     resolveQualifiedName(name.asInstanceOf[dom.QualifiedName])
 
   def resolveSimpleName(s: dom.SimpleName) =
-    if (s.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of SimpleName when parsing " + s + " with parent " + s.getParent)
     val b = s.resolveBinding
-    val isPrivate = dom.Modifier.isPrivate(b.getModifiers)
-    val isProtected = dom.Modifier.isProtected(b.getModifiers)
-    val isStatic = dom.Modifier.isStatic(b.getModifiers)
     val name = s.getFullyQualifiedName
     val identifier = new Identifier(name)
-    b match
-      case b: dom.IVariableBinding if b.isParameter() => identifier
-      case b: dom.IVariableBinding if !b.isField() => identifier
-      case b: dom.IVariableBinding if !b.isParameter() =>
-        val member = if (dom.Modifier.isStatic(b.getModifiers))
-          new Identifier(b.getDeclaringClass.getName)
-        else
-          new ThisExpression()
-        var prefix = if ((isPrivate || isProtected) && !isStatic) "_" else ""
-        new MemberExpression(member, prefix + s.getFullyQualifiedName)
-      case b: dom.ITypeBinding => identifier
-      case b: dom.IPackageBinding => identifier
+    if (b == null)
+      identifier
+    else
+      val isPrivate = dom.Modifier.isPrivate(b.getModifiers)
+      val isProtected = dom.Modifier.isProtected(b.getModifiers)
+      val isStatic = dom.Modifier.isStatic(b.getModifiers)
+      b match
+        case b: dom.IVariableBinding if b.isParameter() => identifier
+        case b: dom.IVariableBinding if !b.isField() => identifier
+        case b: dom.IVariableBinding if !b.isParameter() =>
+          val member = if (dom.Modifier.isStatic(b.getModifiers))
+            new Identifier(b.getDeclaringClass.getName)
+          else
+            new ThisExpression()
+          var prefix = if ((isPrivate || isProtected) && !isStatic) "_" else ""
+          new MemberExpression(member, prefix + s.getFullyQualifiedName)
+        case b: dom.ITypeBinding => identifier
+        case b: dom.IPackageBinding => identifier
 
   def resolveQualifiedName(q: dom.QualifiedName): Expression =
     if (q.getQualifier.resolveBinding == null) throw new RuntimeException("Cannot resolve binding of the Qualifier of a QualifiedName when parsing " + q + " with parent " + q.getParent)

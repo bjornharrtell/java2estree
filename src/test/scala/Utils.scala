@@ -18,9 +18,9 @@ object Utils {
   
   def java2js(java: String) : String = {
     val doc = new Document(java)
-    val parser = ASTParser.newParser(AST.JLS11)
+    val parser = ASTParser.newParser(AST.getJLSLatest())
     val options = JavaCore.getOptions()
-    options.put(JavaCore.COMPILER_SOURCE, "11")
+    options.put(JavaCore.COMPILER_SOURCE, "17")
     parser.setCompilerOptions(options)
     parser.setResolveBindings(true)
     parser.setBindingsRecovery(true)

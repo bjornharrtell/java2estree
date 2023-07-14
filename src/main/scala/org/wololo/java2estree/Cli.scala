@@ -35,7 +35,7 @@ object Cli extends LazyLogging:
     val root = Paths.get(args(0))
     val outpath = Paths.get(args(1))
 
-    val parser = ASTParser.newParser(AST.JLS11)
+    val parser = ASTParser.newParser(AST.getJLSLatest())
     
     logger.info(s"Walking ${root}")
     
@@ -62,7 +62,7 @@ object Cli extends LazyLogging:
       
       logger.info(s"Processing ${file.getPath}")
       val options = JavaCore.getOptions()
-      options.put(JavaCore.COMPILER_SOURCE, "11")
+      options.put(JavaCore.COMPILER_SOURCE, "17")
       parser.setCompilerOptions(options)
       parser.setResolveBindings(true)
       parser.setBindingsRecovery(true)
